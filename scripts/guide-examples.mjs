@@ -1,0 +1,376 @@
+// guide-examples.mjs — every figure in site/guide.html, with the exact source
+// that produced it. Rendered by scripts/build-guide.mjs with the wasm engines.
+// The later TikZ, LuaTeX and OpenType figures share their source with the demo
+// gallery (site/examples-tikz.js), so the guide and the gallery cannot drift.
+import { TIKZ_EXAMPLES } from '../site/examples-tikz.js';
+
+/** A gallery example as a guide figure: same source and engine options, the guide's own id, title and note. */
+function fromGallery(galleryId, id, title, note) {
+  const ex = TIKZ_EXAMPLES.find((e) => e.id === galleryId);
+  if (!ex) throw new Error(`guide-examples: no gallery example ${galleryId}`);
+  const engine = ex.engine ?? (/graphdrawing|\\directlua/.test(ex.src) ? 'lualatex' : undefined);   // the gallery relies on engine 'auto' for these
+  return { id, section: 'tikz', title, kind: 'tikz', note, src: ex.src, plain: ex.plain, engine, opentype: ex.opentype, fonts: ex.fonts };
+}
+
+export const GUIDE = [
+  // ---------------------------------------------------------------- MetaPost
+  { id: 'mp-paths', section: 'metapost', title: 'Paths, tension and curl', kind: 'mp',
+    note: 'MetaPost\'s path syntax: `..` for smooth curves solved by Hobby\'s algorithm, `--` for straight lines, tension and curl control, explicit controls, cycles.',
+    src: `beginfig(1);
+  draw (0,0)..(30,40)..(60,0) withcolor (0.1,0.3,0.8);
+  draw (0,50)..tension 2..(30,90)..(60,50);
+  draw (80,0){up}..{right}(140,60);
+  draw (80,80){curl 0}..(110,120)..{curl 2}(140,80) withpen pencircle scaled 1.2;
+  draw (160,0)..(190,40)..(220,0)..cycle;
+  draw (160,60)..controls (170,110) and (210,110)..(220,60) dashed evenly;
+endfig; end.` },
+  { id: 'mp-pens', section: 'metapost', title: 'Pens, joins, caps and dashes', kind: 'mp',
+    note: 'Elliptical and polygonal pens are real pens: a stroke is the envelope of the pen dragged along the path, as in the original program.',
+    src: `beginfig(1);
+  draw (0,0)--(50,50) withpen pencircle scaled 6;
+  draw (60,0)--(110,50) withpen pensquare scaled 6;
+  draw (120,0)--(170,50) withpen pencircle xscaled 8 yscaled 2 rotated 30;
+  linecap := butt; linejoin := mitered;
+  draw (0,70)--(25,120)--(50,70) withpen pencircle scaled 6;
+  linejoin := beveled; draw (60,70)--(85,120)--(110,70) withpen pencircle scaled 6;
+  linejoin := rounded; linecap := rounded; draw (120,70)--(145,120)--(170,70) withpen pencircle scaled 6;
+  draw (0,140)--(170,140) dashed evenly scaled 2 withpen pencircle scaled 2;
+  draw (0,160)--(170,160) dashed withdots scaled 2 withpen pencircle scaled 3;
+endfig; end.` },
+  { id: 'mp-fills', section: 'metapost', title: 'Fills, colour models and buildcycle', kind: 'mp',
+    note: 'Grey, RGB and CMYK colours, `unfill`, `filldraw`, and `buildcycle` to fill the intersection of two shapes.',
+    src: `beginfig(1);
+  fill fullcircle scaled 50 shifted (25,25) withcolor (0.9,0.2,0.2);
+  fill unitsquare scaled 40 shifted (60,5) withcolor 0.5;
+  fill fullcircle scaled 50 shifted (135,25) withcmykcolor (1,0,0,0);
+  filldraw fullcircle scaled 40 shifted (185,25) withcolor (0.2,0.7,0.3) withpen pencircle scaled 2;
+  path a, b; a := fullcircle scaled 60 shifted (30,90); b := fullcircle scaled 60 shifted (60,90);
+  draw a; draw b; fill buildcycle(a,b) withcolor (0.2,0.4,0.9);
+  fill fullcircle scaled 60 shifted (150,90); unfill fullcircle scaled 30 shifted (150,90);
+endfig; end.` },
+  { id: 'mp-clip', section: 'metapost', title: 'Clipping and bounds', kind: 'mp',
+    note: 'Pictures are values: build one, clip it to a path, take its bounding box, and draw the result.',
+    src: `beginfig(1);
+  picture pic; pic := image(for i = -8 upto 8: draw (i*10,-70)--(i*10,70) withpen pencircle scaled 1.5 withcolor (0.5+i/16, 0.3, 0.8-i/16); endfor);
+  clip pic to fullcircle scaled 130;
+  draw pic; draw bbox pic dashed evenly withcolor 0.5;
+  picture q; q := image(fill fullcircle scaled 30 withcolor (1,0.6,0););
+  setbounds q to unitsquare scaled 12 shifted (-6,-6);
+  draw q shifted (110,0); draw bbox q shifted (110,0);
+endfig; end.` },
+  { id: 'mp-label', section: 'metapost', title: 'Text without TeX: Type 1 outlines', kind: 'mp',
+    note: 'A plain `label` needs no TeX at all: metrics come from the TFM file and the glyphs are Computer Modern Type 1 outlines converted to SVG paths by MetaPost\'s own backend (`prologues:=3`). No web fonts are involved.',
+    src: `prologues := 3;
+beginfig(1);
+  path p; p := fullcircle scaled 120;
+  draw p withpen pencircle scaled 1;
+  label.top("north", point 2 of p); label.bot("south", point 6 of p);
+  label.lft("west", point 4 of p); label.rt("east", point 0 of p);
+  label("MetaPost" infont "cmbx10" scaled 1.6, (0,12));
+  label("cmti10 italic" infont "cmti10", (0,-30));
+  dotlabel.lrt("origin", origin);
+endfig; end.` },
+  { id: 'mp-btex', section: 'metapost', title: 'Labels typeset by plain TeX', kind: 'mp',
+    note: '`btex … etex` blocks are typeset by a real pdfTeX (DVI mode) in one batched run per document, converted by MetaPost\'s own `dvitomp`, and cached by content hash.',
+    src: `prologues := 3;
+beginfig(1);
+  numeric a; a := 60;
+  draw (-a,0)--(a,0) withcolor .6white; draw (0,-a)--(0,a) withcolor .6white;
+  draw (-a, a*sind(-90)) for t=-89 upto 90: ..(t*a/90, a*sind(t)) endfor withpen pencircle scaled 1.2 withcolor (0.1,0.3,0.8);
+  label.top(btex $y=\\sin\\theta$ etex, (a/2, a*.9));
+  label.bot(btex $-\\pi$ etex, (-a,0)); label.bot(btex $\\pi$ etex, (a,0));
+  label.rt(btex $\\displaystyle\\int_{-\\pi}^{\\pi}\\sin\\theta\\,d\\theta = 0$ etex, (a+8, -a*.8));
+endfig; end.` },
+  { id: 'mp-latex', section: 'metapost', title: 'Labels typeset by LaTeX', kind: 'mp',
+    note: 'A `verbatimtex` preamble with `\\documentclass` switches the label engine to LaTeX automatically. amsmath, amssymb, tabular, any package in the bundles.',
+    src: `verbatimtex
+\\documentclass{article}
+\\usepackage{amsmath,amssymb}
+\\begin{document}
+etex
+prologues := 3;
+beginfig(1);
+  draw fullcircle scaled 110 withpen pencircle scaled .8;
+  label.top(btex $\\displaystyle\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}$ etex, (0,55));
+  label.bot(btex $\\begin{pmatrix} \\cos\\theta & -\\sin\\theta \\\\ \\sin\\theta & \\cos\\theta \\end{pmatrix}$ etex, (0,-55));
+  label.lft(btex $\\forall x \\in \\mathbb{R}$ etex, (-55,0));
+  label.rt(btex \\LaTeX\\ \\textit{in the browser} etex, (55,0));
+endfig; end.` },
+  { id: 'mp-boxes', section: 'metapost', title: 'boxes.mp', kind: 'mp',
+    note: 'The standard macro packages ship in the core bundle: boxes, rboxes, graph, format, sarith, string, metaobj, featpost, metauml and more.',
+    src: `input boxes;
+prologues := 3;
+beginfig(1);
+  boxit.lex(btex lexer etex); boxit.parse(btex parser etex);
+  boxit.ast(btex AST etex); circleit.out(btex code etex);
+  parse.w = lex.e + (25,0); ast.w = parse.e + (25,0); out.w = ast.e + (25,0);
+  drawboxed(lex, parse, ast, out);
+  drawarrow lex.e -- parse.w; drawarrow parse.e -- ast.w; drawarrow ast.e -- out.w;
+  label.top(btex \\it tokens etex, .5[lex.e, parse.w] + (0,2));
+  label.top(btex \\it tree etex, .5[parse.e, ast.w] + (0,2));
+endfig; end.` },
+  { id: 'mp-graph', section: 'metapost', title: 'graph.mp', kind: 'mp',
+    note: 'John Hobby\'s graph package with TeX-typeset tick labels; MetaPost chooses the ticks.',
+    src: `input graph;
+prologues := 3;
+beginfig(1);
+  draw begingraph(7cm, 4.5cm);
+    glabel.lft(btex $f(x)$ etex, OUT); glabel.bot(btex $x$ etex, OUT);
+    path p; p := (0,0) for i = 1 upto 60: ..(i/6, (i/6)*(i/6)*mexp(-256*(i/6))) endfor;
+    gdraw p withpen pencircle scaled 1 withcolor (0.8,0.1,0.1);
+    gdraw (0,0.5) for i = 1 upto 60: ..(i/6, sind(60i)/2+0.5) endfor withcolor (0.1,0.3,0.8);
+    glabel.urt(btex $x^2e^{-x}$ etex, (4,0.3));
+  endgraph;
+endfig; end.` },
+  { id: 'mp-koch', section: 'metapost', title: 'A real programming language', kind: 'mp',
+    note: 'Recursive `vardef`s, paths as first-class values joined with `&`, loops, and linear equations solved for you.',
+    src: `vardef koch(expr a, b, n) =
+  if n = 0: a--b
+  else:
+    save c, d, e; pair c, d, e;
+    c = 1/3[a,b]; d = 2/3[a,b];
+    e = 1/2[a,b] + ((b-a) rotated -90) scaled ((sqrt 3)/6);
+    koch(a,c,n-1) & koch(c,e,n-1) & koch(e,d,n-1) & koch(d,b,n-1)
+  fi
+enddef;
+beginfig(1);
+  pair p, q, r; p = (-75,-43); q = (75,-43); r = (0, 87);
+  path s; s := koch(p,q,4) & koch(q,r,4) & koch(r,p,4) & cycle;
+  fill s withcolor (0.85,0.93,1);
+  draw s withpen pencircle scaled .6 withcolor (0.1,0.3,0.7);
+endfig; end.` },
+  // -------------------------------------------------------------------- TikZ
+  { id: 'tz-shading', section: 'tikz', title: 'Shadings', kind: 'tikz',
+    note: 'Axis, radial and ball shadings become SVG gradients, through PGF\'s own dvisvgm driver. This is where a JavaScript DVI reader gives up.',
+    src: `\\documentclass[tikz,border=3pt]{standalone}
+\\usetikzlibrary{shadings}
+\\begin{document}
+\\begin{tikzpicture}
+  \\shade[left color=red,right color=blue] (0,0) rectangle (2.4,1.2);
+  \\shade[inner color=white,outer color=orange] (3.6,0.6) circle (0.6);
+  \\shade[ball color=green!70!black] (5.4,0.6) circle (0.6);
+  \\shade[top color=cyan!60,bottom color=violet!60,middle color=white] (6.6,0) rectangle (9,1.2);
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-patterns', section: 'tikz', title: 'Patterns, opacity, clipping, decorations', kind: 'tikz',
+    note: 'Fill patterns become SVG patterns; opacity, clipping scopes and path decorations all survive intact.',
+    src: `\\documentclass[tikz,border=3pt]{standalone}
+\\usetikzlibrary{patterns,decorations.pathmorphing,decorations.markings}
+\\begin{document}
+\\begin{tikzpicture}
+  \\fill[pattern=north east lines,pattern color=gray] (0,0) rectangle (2,1.2);
+  \\fill[pattern=crosshatch dots,pattern color=blue!60] (2.3,0) rectangle (4.3,1.2);
+  \\begin{scope}
+    \\clip (5.5,0.6) circle (0.7);
+    \\fill[orange] (4.5,0) rectangle (6.5,1.3);
+    \\draw[decorate,decoration=snake,thick] (4.5,0.6) -- (6.5,0.6);
+  \\end{scope}
+  \\fill[red,opacity=0.5] (7,0) rectangle (8.2,1.2);
+  \\fill[blue,opacity=0.5] (7.6,0.2) rectangle (8.8,1.4);
+  \\draw[thick,postaction={decorate},decoration={markings,mark=at position 0.5 with {\\arrow{>}}}] (0,-0.5) -- (8.8,-0.5);
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-graph', section: 'tikz', title: 'Nodes, shapes, arrows', kind: 'tikz',
+    note: 'positioning, shapes.geometric and arrows.meta; bent and curved edges; every library that ships with PGF in TeX Live 2025 is available.',
+    src: `\\documentclass[tikz,border=3pt]{standalone}
+\\usetikzlibrary{positioning,shapes.geometric,arrows.meta}
+\\begin{document}
+\\begin{tikzpicture}[node distance=1.1cm and 1.5cm, every node/.style={font=\\small}]
+  \\node[circle,draw,fill=blue!15] (a) {$a$};
+  \\node[circle,draw,fill=blue!15,right=of a] (b) {$b$};
+  \\node[diamond,draw,fill=red!15,below right=of a] (c) {$c$};
+  \\node[rectangle,draw,rounded corners,right=of b] (d) {$d$};
+  \\draw[-{Stealth}] (a) -- node[above] {1} (b);
+  \\draw[-{Stealth}] (a) -- node[left] {2} (c);
+  \\draw[-{Stealth},dashed] (b) -- (c);
+  \\draw[-{Stealth},bend left] (b) to node[above] {3} (d);
+  \\draw[-{Stealth}] (c) to[out=0,in=-90] (d);
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-cd', section: 'tikz', title: 'Commutative diagrams (tikz-cd)', kind: 'tikz',
+    src: `\\documentclass[border=3pt]{standalone}
+\\usepackage{tikz-cd,amssymb}
+\\begin{document}
+\\begin{tikzcd}[column sep=large,row sep=large]
+  A \\arrow[r,"f"] \\arrow[d,"g"'] \\arrow[dr,dashed,"h"] & B \\arrow[d,"g'"] \\\\
+  C \\arrow[r,"f'"'] & D \\arrow[ul,phantom,"\\lrcorner",very near start]
+\\end{tikzcd}
+\\end{document}` },
+  { id: 'tz-pgfplots', section: 'tikz', title: 'pgfplots', kind: 'tikz',
+    note: 'The real pgfplots package: axes, grids, legends, sampled functions, data coordinates, filled areas.',
+    src: `\\documentclass[border=3pt]{standalone}
+\\usepackage{amsmath,pgfplots}
+\\pgfplotsset{compat=1.18}
+\\begin{document}
+\\begin{tikzpicture}
+  \\begin{axis}[width=8cm,height=5cm,xlabel={$x$},ylabel={$f(x)$},legend pos=outer north east,grid=major,axis lines=left]
+    \\addplot[blue,thick,domain=0:4,samples=60] {x^2*exp(-x)};
+    \\addplot[red,dashed,domain=0:4,samples=60] {0.5*sin(deg(3*x))+0.5};
+    \\addplot[only marks,mark=*,mark size=1.5pt] coordinates {(0.5,0.3) (1.5,0.5) (2.5,0.6) (3.5,0.2)};
+    \\addplot[fill=blue!10,draw=none,domain=0:4,samples=60] {x^2*exp(-x)} \\closedcycle;
+    \\legend{$x^2e^{-x}$,$\\tfrac12(1+\\sin 3x)$,data}
+  \\end{axis}
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-text', section: 'tikz', title: 'Latin Modern, T1 encoding, amsmath', kind: 'tikz',
+    note: 'Text is glyph outlines in the SVG, so it renders identically everywhere; `fonts: \'woff2\'` embeds web fonts instead if you prefer selectable text.',
+    src: `\\documentclass[tikz,border=3pt]{standalone}
+\\usepackage{lmodern}
+\\usepackage[T1]{fontenc}
+\\usepackage{amsmath,amssymb}
+\\begin{document}
+\\begin{tikzpicture}
+  \\node[draw,align=left,text width=6.2cm,inner sep=8pt,rounded corners] {Latin Modern in \\textbf{T1} encoding: fi fl ffi \\& \\textit{italic} \\texttt{mono} \\textsf{sans} \\textsc{Small Caps}.\\\\[4pt] $\\displaystyle\\sum_{n\\ge1}\\frac{1}{n^2}=\\frac{\\pi^2}{6}, \\qquad \\mathbb{R}\\setminus\\mathbb{Q}$};
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-parshape-circle', section: 'tikz', title: 'A paragraph shaped by \\parshape', kind: 'tikz',
+    note: 'This is a whole LaTeX document, not just a picture: prose, inline and displayed amsmath, and three inline TikZ pictures, all set inside a circle. TeX\'s `\\parshape` primitive takes one (indent, width) pair per line; a `\\loop` computes twenty of them with pgfmath as chords of the circle drawn behind the text. Line breaking, hyphenation and the display equation all follow the shape.',
+    src: `\\documentclass[border=8pt]{standalone}
+\\usepackage{lmodern}
+\\usepackage[T1]{fontenc}
+\\usepackage{amsmath,amssymb}
+\\usepackage{tikz}
+\\begin{document}
+% A paragraph set inside a circle. \\parshape takes one (indent, width) pair
+% per line; pgfmath computes each width as a chord of the circle.
+\\def\\R{130.9}               % radius in pt (4.6cm)
+\\def\\B{12}                  % \\baselineskip in pt
+\\newcount\\n \\n=20           % lines: the text block is n\\B = 240pt tall
+\\newcount\\i
+\\def\\shape{}
+\\i=1
+\\loop
+  \\pgfmathsetmacro\\yy{(\\n*\\B/2-(\\i-0.5)*\\B)/10}    % line centre, relative to circle centre, in 10pt units
+  \\pgfmathsetmacro\\hw{10*sqrt(\\R/10*\\R/10-\\yy*\\yy)-6} % half chord, 6pt inside the rim (pgfmath overflows above 16383, hence the /10)
+  \\pgfmathsetmacro\\ind{\\R-\\hw}
+  \\pgfmathsetmacro\\lw{2*\\hw}
+  \\edef\\shape{\\shape\\ind pt \\lw pt }
+  \\advance\\i 1
+\\ifnum\\i<\\numexpr\\n+1\\relax\\repeat
+\\hbox{%
+  \\rlap{\\tikz[baseline=0pt]{\\fill[blue!6] (\\R pt,-111.6pt) circle (\\R pt); \\draw[blue!50!black,line width=.5pt] (\\R pt,-111.6pt) circle (\\R pt);}}%
+  \\vtop{\\hsize=2\\dimexpr\\R pt\\relax \\baselineskip=\\B pt \\parindent=0pt \\tolerance=3000 \\emergencystretch=1.5em \\hyphenpenalty=10
+    \\parshape \\n \\shape
+    The ratio of a circle's circumference to its diameter,
+    $\\pi\\approx3.14159\\ldots$, is the same for every circle
+    \\tikz[baseline=-0.6ex]{\\draw (0,0) circle (0.8ex); \\draw (-0.8ex,0)--(0.8ex,0);}.
+    Archimedes squeezed it between inscribed and circumscribed polygons
+    \\tikz[baseline=-0.6ex]{\\draw (0,0) circle (0.8ex); \\draw (0:0.8ex) \\foreach \\a in {60,120,...,300} {-- (\\a:0.8ex)} -- cycle;},
+    proving $3\\tfrac{10}{71}<\\pi<3\\tfrac17$; two thousand years later Leibniz found
+    \\[ \\frac{\\pi}{4}=\\sum_{k=0}^{\\infty}\\frac{(-1)^k}{2k+1}=1-\\frac13+\\frac15-\\frac17+\\cdots, \\]
+    and Euler tied $\\pi$ to the primes through $\\sum_{n\\ge1}n^{-2}=\\pi^2/6$
+    and to $e$ through $e^{i\\pi}+1=0$; Wallis wrote $\\frac{\\pi}{2}=\\prod_{n\\ge1}\\frac{4n^2}{4n^2-1}$.
+    The Gaussian integral
+    $\\int_{-\\infty}^{\\infty}e^{-x^2}\\,dx=\\sqrt{\\pi}$
+    \\tikz[baseline=-0.3ex]{\\draw[thick] plot[domain=-2.2:2.2,samples=30] ({\\x*0.42em},{exp(-\\x*\\x)*1.4ex});}
+    carries it into probability and statistics, and it hides in Stirling's
+    formula $n!\\sim\\sqrt{2\\pi n}\\,(n/e)^n$. This paragraph is set by
+    \\TeX's \\texttt{\\char\`\\\\parshape} primitive: twenty line widths
+    computed by pgfmath as chords of the circle, with the
+    display and the inline TikZ pictures flowing
+    through the same shape as the prose.\\par}}
+\\end{document}` },
+  { id: 'tz-parshape-wrap', section: 'tikz', title: 'Text flowing around a figure', kind: 'tikz',
+    note: 'The same primitive with nine narrow lines and then the full measure, the figure hung from the first baseline in a zero-width box: what wrapfig does, by hand. The figure is a TikZ plot of Fourier partial sums sampled by pgfmath; the paragraph carries integrals, limits and a display.',
+    src: `\\documentclass[border=8pt]{standalone}
+\\usepackage{lmodern}
+\\usepackage[T1]{fontenc}
+\\usepackage{amsmath,amssymb}
+\\usepackage{tikz}
+\\begin{document}
+% Text flowing around a figure, by hand: \\parshape narrows the first k
+% lines, and the figure hangs from the first baseline in a zero-width box.
+\\newdimen\\W \\W=11.5cm      % the measure
+\\newdimen\\F \\F=4.4cm       % width reserved for the figure
+\\newcount\\k \\k=9           % lines beside it
+\\def\\shape{}\\newcount\\i \\i=1
+\\loop \\edef\\shape{\\shape 0pt \\the\\dimexpr\\W-\\F\\relax\\space}\\advance\\i 1 \\ifnum\\i<\\numexpr\\k+1\\relax\\repeat
+\\edef\\shape{\\shape 0pt \\the\\W}
+\\vtop{\\hsize=\\W \\parindent=0pt \\tolerance=2000 \\emergencystretch=1em
+  \\parshape \\numexpr\\k+1\\relax \\shape
+  % \\vtop{\\kern0pt ...} puts the whole picture below the baseline; \\smash hides
+  % that depth from the line spacing; \\raise lines its top up with the first line.
+  \\rlap{\\hskip\\dimexpr\\W-\\F+3mm\\relax\\smash{\\raise\\ht\\strutbox\\vtop{\\kern0pt\\hbox{%
+    \\begin{tikzpicture}[x=0.55cm,y=0.95cm,font=\\scriptsize]
+      \\draw[->] (-0.3,0) -- (6.9,0) node[right] {$x$};
+      \\draw[->] (0,-1.45) -- (0,1.55) node[left] {$S_N(x)$};
+      \\draw[gray!70,line width=1.2pt] (0,1) -- (3.1416,1) -- (3.1416,-1) -- (6.2832,-1);
+      \\draw[blue!70!black,domain=0:6.2832,samples=90] plot (\\x,{4/pi*sin(\\x r)});
+      \\draw[red!80!black,domain=0:6.2832,samples=200] plot (\\x,{4/pi*(sin(\\x r)+sin(3*\\x r)/3+sin(5*\\x r)/5)});
+      \\draw[violet!80!black,thick,domain=0:6.2832,samples=500] plot (\\x,{4/pi*(sin(\\x r)+sin(3*\\x r)/3+sin(5*\\x r)/5+sin(7*\\x r)/7+sin(9*\\x r)/9+sin(11*\\x r)/11+sin(13*\\x r)/13+sin(15*\\x r)/15+sin(17*\\x r)/17+sin(19*\\x r)/19+sin(21*\\x r)/21)});
+      \\foreach \\t/\\l in {3.1416/$\\pi$,6.2832/$2\\pi$} \\draw (\\t,2pt) -- (\\t,-2pt) node[below=1pt,fill=white,inner sep=1pt] {\\l};
+      \\node[anchor=north west,align=left,inner sep=1pt] at (3.4,1.55) {\\textcolor{blue!70!black}{$N=1$}\\\\ \\textcolor{red!80!black}{$N=5$}\\\\ \\textcolor{violet!80!black}{$N=21$}};
+    \\end{tikzpicture}}}}}%
+  Any reasonable periodic function is a sum of sines and cosines. For the square wave
+  \\tikz[baseline=-0.5ex]\\draw (0,-0.7ex)--(0,0.7ex)--(0.9em,0.7ex)--(0.9em,-0.7ex)--(1.8em,-0.7ex);
+  $f(x)=\\operatorname{sgn}(\\sin x)$ the cosine coefficients
+  $a_n=\\frac1\\pi\\int_{-\\pi}^{\\pi}f(x)\\cos nx\\,dx$ all vanish, while
+  $b_n=\\frac{2}{\\pi n}\\,(1-\\cos n\\pi)$, so only the odd harmonics survive:
+  \\[ f(x)=\\frac{4}{\\pi}\\sum_{k=0}^{\\infty}\\frac{\\sin\\bigl((2k+1)x\\bigr)}{2k+1}. \\]
+  The partial sums $S_N$ on the right overshoot each jump by about nine per cent
+  however large $N$ becomes: the Gibbs phenomenon,
+  $\\lim_{N\\to\\infty}S_N\\!\\left(\\tfrac{\\pi}{2N}\\right)=\\tfrac{2}{\\pi}\\operatorname{Si}(\\pi)\\approx1.179$.
+  Parseval's identity $\\frac1\\pi\\int_{-\\pi}^{\\pi}f^2=\\sum_n b_n^2$ then yields
+  $\\sum_{k\\ge0}(2k+1)^{-2}=\\pi^2/8$, from which Euler's $\\zeta(2)=\\pi^2/6$ follows in one line.
+  The gap the text flows around is a \\texttt{\\char\`\\\\parshape} too: nine narrow lines beside the
+  figure, then the full measure, with the figure itself hung from the first baseline in a
+  zero-width \\texttt{\\char\`\\\\rlap} box.\\par}
+\\end{document}` },
+  { id: 'tz-tree', section: 'tikz', title: 'Trees, matrices, decorations', kind: 'tikz',
+    src: `\\documentclass[tikz,border=3pt]{standalone}
+\\usetikzlibrary{trees,decorations.pathreplacing}
+\\begin{document}
+\\begin{tikzpicture}[level distance=11mm, sibling distance=18mm, every node/.style={draw,rounded corners,fill=blue!8,font=\\footnotesize}, edge from parent/.style={draw,-latex}]
+  \\node {mp-tikz-wasm}
+    child { node {mplib.wasm} child { node {SVG} } child { node {EPS} } }
+    child { node {tex.wasm} child { node {DVI} } }
+    child { node {dvisvgm.wasm} child { node {TikZ} } };
+  \\draw[decorate,decoration={brace,amplitude=4pt,mirror},thick] (-3.2,-2.6) -- (3.2,-2.6) node[midway,below=4pt,draw=none,fill=none] {all in the browser};
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-graphdrawing', section: 'tikz', title: 'Graph drawing (LuaTeX)', kind: 'tikz', engine: 'lualatex',
+    note: 'The `graphdrawing` library computes layouts in Lua, so it needs LuaTeX. `engine: \'auto\'` (and the tags) switch to `luatex.wasm` when a document uses it; layered, spring, tree, circular and phylogenetic layouts all run. This is the library tikzjax could never offer.',
+    src: `\\documentclass[tikz,border=3pt]{standalone}
+\\usetikzlibrary{graphs,graphs.standard,graphdrawing,quotes}
+\\usegdlibrary{trees,layered,force,circular}
+\\begin{document}
+\\begin{tikzpicture}[>=stealth, nodes={draw,circle,fill=blue!10,font=\\small}]
+  \\graph[layered layout, sibling distance=8mm, level distance=8mm] {
+    a -> {b -> {d, e}, c -> {f -> g, h}}; e -> g;
+  };
+  \\begin{scope}[xshift=4.2cm, nodes={fill=red!10}]
+    \\graph[spring layout, node distance=9mm] { 1 -- {2,3,4}; 2 -- 3 -- 4 -- 5 -- 2; 5 -- 6 -- 7 -- 5 };
+  \\end{scope}
+  \\begin{scope}[xshift=8.4cm, nodes={fill=orange!20}]
+    \\graph[simple necklace layout, node distance=9mm] { subgraph C_n [n=7] };
+  \\end{scope}
+\\end{tikzpicture}
+\\end{document}` },
+  { id: 'tz-plain', section: 'tikz', title: 'Plain TeX too', kind: 'tikz', plain: true,
+    note: '`engine: \'plain\'` runs plain TeX with e-TeX (TeX Live\'s `etex`), which is what PGF needs.',
+    src: `\\input tikz
+\\nopagenumbers
+\\tikzpicture
+  \\draw[thick,fill=blue!10] (0,0) circle (1);
+  \\foreach \\a in {0,45,...,315} \\draw (0,0) -- (\\a:1) node[circle,fill=red,inner sep=1.5pt] {};
+  \\node at (0,-1.4) {plain \\TeX\\ with TikZ};
+\\endtikzpicture
+\\bye` },
+  // ---------------------------------------------------------------- more TikZ libraries (shared with the gallery)
+  fromGallery('tikz-arrows', 'tz-arrows', 'Arrow tips', 'The `arrows.meta` tips, filled and `open`, stacked, `round`, harpoons and `Bar`s, and the `bending` library\'s tips that follow a curved path.'),
+  fromGallery('tikz-decorations', 'tz-decorations', 'Decorations', 'Path morphing, shapes and markings along a path, footprints, and `text along path`.'),
+  fromGallery('tikz-knots', 'tz-knots', 'Knots (spath3)', 'spath3\'s `knots` library, bundled although pgf does not ship it: every crossing of a self-intersecting strand is found and the upper strand redrawn.'),
+  fromGallery('tikz-calligraphy', 'tz-calligraphy', 'Calligraphy (spath3)', 'A broad nib, a copperplate nib, and the calligraphic brace and parentheses built on them.'),
+  fromGallery('tikz-matrix', 'tz-matrix', 'Matrices', 'A `matrix of math nodes` with delimiters and a highlighted diagonal on the background layer, and arrows between the cells of a second matrix.'),
+  fromGallery('tikz-concepts', 'tz-mindmap', 'A mind map', 'The `mindmap` library, whose shaded connection bars become SVG gradients.'),
+  fromGallery('plain-parshape', 'tz-plain-parshape', 'A diamond, in plain TeX', 'No packages: a plain-TeX loop builds a 21-line `\\parshape` and the line breaker pours the paragraph into it.'),
+  // ---------------------------------------------------------------- LuaTeX
+  fromGallery('gd-trees', 'lua-gd-trees', 'More graph drawing', 'A binary tree layout and a spring-electrical layout, both computed in Lua.'),
+  fromGallery('luatex-plain', 'lua-plain', 'Plain LuaTeX', '`engine: \'luatex\'`: `\\directlua` sieves the primes and hands the counts to TeX with `token.set_macro`; the bars are `\\vrule`s and the table an `\\halign`.'),
+  fromGallery('lualatex-lua', 'lua-latex', 'LuaLaTeX', '`engine: \'lualatex\'`: Lua writes one `\\rule` per odd entry of Pascal\'s triangle into the paragraph, and amsmath sets the theorem.'),
+  // ---------------------------------------------------------------- OpenType
+  fromGallery('otf-fontspec', 'otf-fontspec', 'fontspec under LuaLaTeX', 'With the `opentype` bundle: ligatures, kerning, Unicode input, letter-spacing, a small-caps face and optical sizes, all from Latin Modern\'s OpenType faces.'),
+  fromGallery('otf-plain-luatex', 'otf-plain', 'luaotfload in plain LuaTeX', '`\\input luaotfload.sty` and a `\\font` with a feature list; no LaTeX involved.'),
+  fromGallery('otf-woff2', 'otf-woff2', 'Web fonts, not outlines', 'With `fonts: \'woff2\'` the text in this figure is real `<text>` in an embedded subset of the face: select it.'),
+  fromGallery('otf-unicode-math', 'otf-math', 'unicode-math', 'Unicode maths input in Latin Modern Math; needs the `otf-fonts` bundle as well.'),
+];

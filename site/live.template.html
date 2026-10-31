@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mp-tikz-wasm Live Graphics</title>
+__FAVICON__
+__FONTS__
+<style>
+__THEME_CSS__
+  body { font-family: var(--ui); font-size: 15px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 clamp(14px, 3vw, 32px) 48px; }
+  .masthead { padding: 34px 0 6px; }
+  h1 { font: 600 clamp(28px, 4.4vw, 40px)/1.1 var(--display); letter-spacing: -.015em; margin: 6px 0 10px; }
+  .masthead p { margin: 0; color: var(--ink-2); max-width: 84ch; font: 17px/1.55 var(--body); }
+  .masthead .status-line { margin-top: 14px; }
+  .grid { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 18px; align-items: start; }
+  .card h2 { font: 600 17px/1.25 var(--display); margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .card h2 small { color: var(--muted); font: 400 12.5px var(--ui); }
+  .card h2 .ms { margin-left: auto; color: var(--muted); font: 400 12px var(--mono); font-variant-numeric: tabular-nums; }
+  .fig { min-height: 270px; display: flex; align-items: center; justify-content: center; padding: 14px; }
+  .fig svg { max-width: 100%; height: auto; max-height: 300px; }
+  .controls { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 8px 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+  .controls input[type=range] { width: 100%; }
+  .controls .v { font: 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); min-width: 3.5em; text-align: right; }
+  .controls button { grid-column: 1 / -1; justify-self: start; }
+  #formula-input { font: 13.5px var(--mono); padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); width: 100%; }
+  #formula-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font: 14px/1.6 var(--body); max-width: 100ch; }
+</style>
+<script>
+__THEME_JS__
+</script>
+</head>
+<body>
+__SITEBAR:live__
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">mp-tikz-wasm · real-time</div>
+  <h1>Live graphics with MetaPost and TikZ</h1>
+  <p>Every picture here is typeset again by MetaPost or LaTeX in your browser each time it changes: the harmonograph, the cube and the pendulum by MetaPost (a few milliseconds a frame); the plot, the clock and the formula by pdfTeX and dvisvgm (a few hundred milliseconds). <a href="__GUIDE_URL__">Feature guide</a> · <a href="__REPO_URL__">Source</a></p>
+  <div class="status-line"><span class="dot busy"></span><span id="status">Loading the engines…</span></div>
+</header>
+
+<div class="grid">
+  <div class="card" id="c-harm">
+    <h2>Harmonograph <small>MetaPost, on every slider move</small><span class="ms"></span></h2>
+    <div class="fig paper"><span class="placeholder">waiting for the engine…</span></div>
+    <div class="controls">
+      <label>f<sub>1</sub></label><input type="range" min="1" max="8" step="0.05" value="3" data-k="f1"><span class="v">3</span>
+      <label>f<sub>2</sub></label><input type="range" min="1" max="8" step="0.05" value="2" data-k="f2"><span class="v">2</span>
+      <label>f<sub>3</sub></label><input type="range" min="1" max="8" step="0.05" value="3" data-k="f3"><span class="v">3</span>
+      <label>f<sub>4</sub></label><input type="range" min="1" max="8" step="0.05" value="2" data-k="f4"><span class="v">2</span>
+      <label>phase</label><input type="range" min="0" max="360" step="1" value="45" data-k="phase"><span class="v">45</span>
+      <label>damping</label><input type="range" min="0" max="1" step="0.01" value="0.3" data-k="damping"><span class="v">0.3</span>
+      <label>colour</label><input type="range" min="0" max="1" step="0.01" value="0.62" data-k="hue"><span class="v">0.62</span>
+    </div>
+    <details class="source"><summary>MetaPost source of the last frame</summary><pre class="code"></pre></details>
+  </div>
+
+  <div class="card" id="c-cube">
+    <h2>Spinning cube <small>MetaPost, one run per animation frame</small><span class="ms"></span></h2>
+    <div class="fig paper"><span class="placeholder">waiting for the engine…</span></div>
+    <div class="controls">
+      <label>speed</label><input type="range" min="0" max="3" step="0.05" value="1" data-k="speed"><span class="v">1</span>
+      <button class="btn" type="button" id="cube-toggle">Pause</button>
+    </div>
+    <details class="source"><summary>MetaPost source of the last frame</summary><pre class="code"></pre></details>
+  </div>
+
+  <div class="card" id="c-pend">
+    <h2>Double pendulum <small>simulated in JavaScript, drawn by MetaPost each frame</small><span class="ms"></span></h2>
+    <div class="fig paper"><span class="placeholder">waiting for the engine…</span></div>
+    <div class="controls">
+      <label>trail</label><input type="range" min="0" max="400" step="10" value="150" data-k="trail"><span class="v">150</span>
+      <button class="btn" type="button" id="pend-restart">Restart</button>
+    </div>
+    <details class="source"><summary>MetaPost source of the last frame</summary><pre class="code"></pre></details>
+  </div>
+
+  <div class="card" id="c-plot">
+    <h2>Damped oscillator <small>pgfplots, re-typeset on release</small><span class="ms"></span></h2>
+    <div class="fig paper"><span class="placeholder">waiting for the engine…</span></div>
+    <div class="controls">
+      <label>amplitude</label><input type="range" min="0.1" max="1" step="0.05" value="1" data-k="A"><span class="v">1</span>
+      <label>damping</label><input type="range" min="0" max="1" step="0.01" value="0.3" data-k="k"><span class="v">0.3</span>
+      <label>frequency</label><input type="range" min="0.5" max="6" step="0.1" value="2" data-k="w"><span class="v">2</span>
+    </div>
+    <details class="source"><summary>LaTeX source of the last render</summary><pre class="code"></pre></details>
+  </div>
+
+  <div class="card" id="c-clock">
+    <h2>Clock <small>TikZ, typeset every second</small><span class="ms"></span></h2>
+    <div class="fig paper"><span class="placeholder">waiting for the engine…</span></div>
+    <details class="source"><summary>LaTeX source of the last render</summary><pre class="code"></pre></details>
+  </div>
+
+  <div class="card" id="c-formula">
+    <h2>Formula <small>LaTeX with amsmath, as you type</small><span class="ms"></span></h2>
+    <div class="fig paper"><span class="placeholder">waiting for the engine…</span></div>
+    <div class="controls" style="grid-template-columns: 1fr">
+      <input type="text" id="formula-input" spellcheck="false" aria-label="LaTeX formula" value="\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}">
+    </div>
+    <details class="source"><summary>LaTeX source of the last render</summary><pre class="code"></pre></details>
+  </div>
+</div>
+
+<footer>Four engine instances run in Web Workers: MetaPost-only ones for the harmonograph, the cube and the pendulum, and one with pdfTeX and dvisvgm for the LaTeX documents, so neither a TeX run nor a slider drag ever stalls an animation frame. Sources: <code>live-sources.js</code>.</footer>
+</div>
+
+__SOURCES_SCRIPT__
+__COMMON_SCRIPT__
+__BOOT__
+<script type="module">
+const $ = (s, r = document) => r.querySelector(s);
+const S = globalThis.PAGE_SOURCES;
+const card = (id) => { const c = $('#' + id); return { c, fig: $('.fig', c), ms: $('.ms', c), pre: $('pre', c), values() { const o = {}; for (const i of c.querySelectorAll('input[type=range]')) o[i.dataset.k] = parseFloat(i.value); return o; } }; };
+for (const i of document.querySelectorAll('input[type=range]')) i.addEventListener('input', () => { i.nextElementSibling.textContent = i.value; });
+const showSvg = (k, svg, ms) => { k.fig.innerHTML = svg || '<span class="placeholder">no output</span>'; k.ms.textContent = ms; };
+let mpEngine, cubeEngine, pendEngine, texEngine;
+try {
+  [mpEngine, cubeEngine, pendEngine, texEngine] = await Promise.all([globalThis.enginePromise, globalThis.cubeEnginePromise, globalThis.pendulumEnginePromise, globalThis.texEnginePromise]);
+  $('#status').textContent = globalThis.ENGINE_MODE === 'workers' ? 'Engines ready, each in its own Web Worker.' : 'Engines ready, running in-process: this host allows no workers, so the animation pauses while TeX runs.';
+  $('.masthead .dot').className = 'dot ok';
+} catch (e) { $('#status').textContent = `The engines could not start here: ${e.message}`; $('.masthead .dot').className = 'dot bad'; throw e; }
+
+// -- harmonograph: one MetaPost run per slider event, coalesced while busy
+const harm = card('c-harm');
+const drawHarm = makeQueue(async (p) => {
+  const src = S.harmonograph(p); harm.pre.textContent = src;
+  const r = await mpEngine.run(src, { format: 'svg', svg: { idPrefix: 'h-' } });
+  showSvg(harm, r.figures[0]?.svg, `${r.stats.metapostMs.toFixed(0)} ms`);
+});
+harm.c.addEventListener('input', () => drawHarm(harm.values())); drawHarm(harm.values());
+
+// An animation runs one MetaPost instance per frame. Patches 0010–0012 removed
+// the per-instance leaks that made that die in minutes (docs/14 §11: 319 KB,
+// then 1.2 KB, now 0 bytes per instance), so an engine can run indefinitely.
+// Retiring it every 30,000 frames stays as a safeguard against regressions: the
+// replacement is created first, so no frame is lost, and it costs one engine
+// start per eight minutes at 60 fps.
+const RECYCLE_AFTER = 30000;
+function recycling(engine) {
+  const ref = { engine, runs: 0, swapping: null };
+  return async (src, opts) => {
+    const r = await ref.engine.run(src, opts);
+    if (++ref.runs >= RECYCLE_AFTER && !ref.swapping) {
+      ref.swapping = globalThis.newMetaPostEngine().then((fresh) => { const old = ref.engine; ref.engine = fresh; ref.runs = 0; ref.swapping = null; old.dispose?.(); }, (e) => { ref.swapping = null; console.warn('engine recycling failed:', e.message); });
+    }
+    return r;
+  };
+}
+// -- cube: an animation loop; each frame is a MetaPost run with the time as a variable
+const cube = card('c-cube');
+const runCube = recycling(cubeEngine);
+let playing = true, t = 0, last = performance.now(), frames = 0, fpsAt = performance.now(), fps = 0;
+async function frame() {
+  if (!playing) return;
+  const now = performance.now();
+  if (now - last < 15) { requestAnimationFrame(frame); return; }      // at most ~60 frames a second
+  t += (now - last) / 1000 * cube.values().speed; last = now;
+  const src = S.cube(t);
+  const r = await runCube(src, { format: 'svg', svg: { idPrefix: 'c-' } });
+  const errs = r.diagnostics.filter((d) => d.severity === 'error' || d.severity === 'fatal');
+  if (r.figures[0]?.svg && !errs.length) cube.fig.innerHTML = r.figures[0].svg;   // keep the last good frame otherwise
+  if (++frames % 10 === 0) { fps = 10000 / (performance.now() - fpsAt); fpsAt = performance.now(); cube.ms.textContent = errs.length ? `MetaPost error: ${errs[0].message}` : `${r.stats.metapostMs.toFixed(1)} ms MetaPost · ${fps.toFixed(0)} fps`; cube.pre.textContent = src; }
+  requestAnimationFrame(frame);
+}
+$('#cube-toggle').onclick = () => { playing = !playing; $('#cube-toggle').textContent = playing ? 'Pause' : 'Play'; if (playing) { last = performance.now(); frame(); } };
+frame();
+
+// -- double pendulum: the physics runs here (RK4), MetaPost draws every frame on its own engine
+const pend = card('c-pend');
+const runPend = recycling(pendEngine);
+const G = 9.81, L = 1, MASS = 1;
+let ps = { a1: 2.2, w1: 0, a2: 2.6, w2: 0 }, trail = [], pendLast = performance.now();
+function deriv(s) {
+  const d = s.a1 - s.a2, den = 2 * MASS + MASS - MASS * Math.cos(2 * d);
+  const dw1 = (-G * (2 * MASS + MASS) * Math.sin(s.a1) - MASS * G * Math.sin(s.a1 - 2 * s.a2) - 2 * Math.sin(d) * MASS * (s.w2 * s.w2 * L + s.w1 * s.w1 * L * Math.cos(d))) / (L * den);
+  const dw2 = (2 * Math.sin(d) * (s.w1 * s.w1 * L * (MASS + MASS) + G * (MASS + MASS) * Math.cos(s.a1) + s.w2 * s.w2 * L * MASS * Math.cos(d))) / (L * den);
+  return { a1: s.w1, w1: dw1, a2: s.w2, w2: dw2 };
+}
+function step(s, h) {
+  const add = (a, b, k) => ({ a1: a.a1 + k * b.a1, w1: a.w1 + k * b.w1, a2: a.a2 + k * b.a2, w2: a.w2 + k * b.w2 });
+  const k1 = deriv(s), k2 = deriv(add(s, k1, h / 2)), k3 = deriv(add(s, k2, h / 2)), k4 = deriv(add(s, k3, h));
+  return { a1: s.a1 + h / 6 * (k1.a1 + 2 * k2.a1 + 2 * k3.a1 + k4.a1), w1: s.w1 + h / 6 * (k1.w1 + 2 * k2.w1 + 2 * k3.w1 + k4.w1), a2: s.a2 + h / 6 * (k1.a2 + 2 * k2.a2 + 2 * k3.a2 + k4.a2), w2: s.w2 + h / 6 * (k1.w2 + 2 * k2.w2 + 2 * k3.w2 + k4.w2) };
+}
+let pendFrames = 0, pendAt = performance.now();
+async function pendFrame() {
+  const now = performance.now();
+  if (now - pendLast < 15) { requestAnimationFrame(pendFrame); return; }
+  const dt = Math.min(now - pendLast, 50) / 1000; pendLast = now;
+  for (let i = 0; i < 4; i++) ps = step(ps, dt / 4);                       // four sub-steps keep RK4 accurate at 60 fps
+  const x2 = 60 * Math.sin(ps.a1) + 60 * Math.sin(ps.a2), y2 = -60 * Math.cos(ps.a1) - 60 * Math.cos(ps.a2);
+  trail.push([x2, y2]); const keep = pend.values().trail; if (trail.length > keep) trail.splice(0, trail.length - keep);
+  const src = S.pendulum({ a1: ps.a1, a2: ps.a2, trail });
+  try {
+    const r = await runPend(src, { format: 'svg', svg: { idPrefix: 'd-' } });
+    if (r.figures[0]?.svg && r.status !== 'error') pend.fig.innerHTML = r.figures[0].svg;
+    if (++pendFrames % 10 === 0) { pend.ms.textContent = `${r.stats.metapostMs.toFixed(1)} ms MetaPost · ${(10000 / (performance.now() - pendAt)).toFixed(0)} fps`; pendAt = performance.now(); pend.pre.textContent = src; }
+  } catch (e) { pend.ms.textContent = `error: ${e.message}`; }
+  requestAnimationFrame(pendFrame);
+}
+$('#pend-restart').onclick = () => { ps = { a1: 1.5 + Math.random() * 2, w1: 0, a2: 1 + Math.random() * 3, w2: 0 }; trail = []; };
+pendFrame();
+
+// -- formula: typeset by LaTeX as you type, debounced and coalesced
+const formula = card('c-formula');
+const drawFormula = makeQueue(async (tex) => {
+  const src = S.formula(tex); formula.pre.textContent = src;
+  const r = await texEngine.latex(src, { svg: { idPrefix: 'f-', precision: false } });
+  const errs = r.diagnostics.filter((d) => d.severity === 'error' || d.severity === 'fatal');
+  if (r.pages[0]) formula.fig.innerHTML = r.pages[0];
+  formula.ms.textContent = errs.length ? `LaTeX: ${errs[0].message.slice(0, 70)}` : `${r.stats.texMs.toFixed(0)} ms TeX + ${r.stats.dvisvgmMs.toFixed(0)} ms dvisvgm`;
+});
+$('#formula-input').addEventListener('input', debounce(() => drawFormula($('#formula-input').value), 300)); drawFormula($('#formula-input').value);
+
+// -- pgfplots: debounced, coalesced; the pre-warmed tikz.fmt makes each run ~250 ms when available
+const plot = card('c-plot');
+const drawPlot = makeQueue(async (p) => {
+  const src = S.plot(p); plot.pre.textContent = src;
+  const r = await texEngine.latex(src, { svg: { idPrefix: 'p-', precision: false } });
+  showSvg(plot, r.pages[0], `${r.stats.texMs.toFixed(0)} ms TeX + ${r.stats.dvisvgmMs.toFixed(0)} ms dvisvgm`);
+});
+plot.c.addEventListener('input', debounce(() => drawPlot(plot.values()), 80)); drawPlot(plot.values());
+
+// -- clock: a new TikZ document every second
+const clock = card('c-clock');
+const drawClock = makeQueue(async () => {
+  const d = new Date(); const src = S.clock(d.getHours(), d.getMinutes(), d.getSeconds()); clock.pre.textContent = src;
+  const r = await texEngine.latex(src, { svg: { idPrefix: 'k-', precision: false } });
+  showSvg(clock, r.pages[0], `${r.stats.texMs.toFixed(0)} ms TeX + ${r.stats.dvisvgmMs.toFixed(0)} ms dvisvgm`);
+});
+drawClock(); setInterval(drawClock, 1000);
+</script>
+</body>
+</html>
