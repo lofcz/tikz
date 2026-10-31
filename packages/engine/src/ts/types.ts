@@ -104,9 +104,9 @@ export interface MetaPostOptions {
   /** Defer engine glue and MetaPost WASM until used. MetaPost version fields in creation
    * metadata remain empty in this mode. No cross-request cache is required. */
   lazy?: boolean;
-  /** Default for latex()'s snapshot option. Node: 'auto' (tikz.fmt from local files is free). Browser: 'none',
-   *  because the 5.8 MB format does not compress and costs more to download than the files it replaces
-   *  (2.5 MB gzipped); set 'auto' when many TikZ figures amortise it or the format is already cached. */
+  /** Default for latex()'s snapshot option: Node 'auto', browser 'none'. Browser hosts
+   * may enable 'auto' when shipping precompiled formats (the @lofcz/tikz browser entry does).
+   * Auto uses basic TikZ when available and the full format for explicit plotting packages. */
   snapshot?: 'auto' | 'none';
 }
 

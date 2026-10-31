@@ -6,20 +6,30 @@ import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { x } from 'tar';
+import { buildBasicFormat } from './build-basic-format.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const pin = JSON.parse(await readFile(join(root, 'upstream.json'), 'utf8'));
 const target = join(root, 'runtime');
+const buildKey = createHash('sha256');
+for (const path of ['scripts/prepare-runtime.mjs', 'scripts/build-basic-format.mjs', 'scripts/data/bundle-usage.json', 'packages/engine/bundles/tex/tikz-basic-snapshot.tex'])
+  buildKey.update(await readFile(join(root, path)));
+const recipeKey = buildKey.digest('hex');
 let cached = false;
 try {
   const installed = JSON.parse(await readFile(join(target, 'upstream.json'), 'utf8'));
-  if (JSON.stringify(installed) === JSON.stringify(pin)) {
+  if (JSON.stringify(installed) === JSON.stringify(pin) && (await readFile(join(target, '.build-key'), 'utf8')) === recipeKey) {
     await access(join(target, 'dist/tex.wasm'));
     await access(join(target, 'dist/index.js'));
     console.log(`mp-tikz-wasm ${pin.version} ready`);
     cached = true;
   }
 } catch {}
-if (!cached) {
+let rawReady = false;
+try {
+  const installed = JSON.parse(await readFile(join(target, 'upstream.json'), 'utf8'));
+  if (JSON.stringify(installed) === JSON.stringify(pin)) { await access(join(target, 'dist/bundles/core/files')); rawReady = true; }
+} catch {}
+if (!cached && !rawReady) {
   const temporary = await mkdtemp(join(tmpdir(), 'tikz-build-'));
   try {
     const archive = process.env.TIKZ_ARCHIVE
@@ -67,6 +77,8 @@ execFileSync(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'),
 await cp(join(root, 'packages/engine/dist'), join(target, 'dist'), {
   recursive: true, filter: async source => (await stat(source)).isDirectory() || /\.(js|d\.ts)$/.test(source),
 });
+if (!cached) await buildBasicFormat(target, pin.bundles);
+const usage = JSON.parse(await readFile(join(root, 'scripts/data/bundle-usage.json'), 'utf8'));
 // Bounded archives avoid inflating a whole font/macro bundle for one file.
 const bundleRoot = join(target, 'dist/bundles');
 const chunkLimit = 512 * 1024;
@@ -84,11 +96,16 @@ for (const name of pin.bundles) {
     }));
     chunks = []; offset = 0; chunkNumber++;
   }
-  for (const [path, expected] of Object.entries(manifest.files)) {
+  const group = path => usage[name]?.[path] ?? 0;
+  const entries = Object.entries(manifest.files).sort(([a], [b]) =>
+    group(b) - group(a) || (a < b ? -1 : a > b ? 1 : 0));
+  let previousGroup;
+  for (const [path, expected] of entries) {
     const bytes = await readFile(join(directory, 'files', path));
     if (bytes.length !== expected.size || createHash('sha256').update(bytes).digest('hex').slice(0, expected.sha.length) !== expected.sha)
       throw new Error(`Bundle manifest mismatch: ${name}/${path}`);
-    if (offset && offset + bytes.length > chunkLimit) await flush();
+    if (offset && (offset + bytes.length > chunkLimit || group(path) !== previousGroup)) await flush();
+    previousGroup = group(path);
     index[path] = [`chunks/${chunkNumber}.br`, offset, bytes.length]; chunks.push(bytes); offset += bytes.length;
   }
   await flush();
@@ -104,4 +121,5 @@ const { nodeIO } = await import(new URL('../runtime/dist/node.js', import.meta.u
 const bundles = new BundleSet(await nodeIO());
 await bundles.addAll(pin.bundles.map(name => ({ name, manifestUrl: new URL(`../runtime/dist/bundles/${name}/`, import.meta.url).href })));
 await writeFile(join(bundleRoot, 'filesystem.json'), JSON.stringify(bundles.exportFilesystemIndex()));
+await writeFile(join(target, '.build-key'), recipeKey);
 console.log('Compiled fork engine; indexed chunked bundles ready');

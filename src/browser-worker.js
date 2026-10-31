@@ -1,7 +1,7 @@
 import { MetaPost } from '../runtime/dist/index.js';
 
 try {
-  const engine = await MetaPost.create({ worker: false, lazy: true, logLevel: 'silent' });
+  const engine = await MetaPost.create({ worker: false, lazy: true, snapshot: 'auto', logLevel: 'silent' });
   self.onmessage = async ({ data: { source: code, maxOutputBytes } }) => {
     try {
       const source = /^\s*\\documentclass\b/m.test(code) ? code : String.raw`\documentclass[tikz,border=6pt]{standalone}

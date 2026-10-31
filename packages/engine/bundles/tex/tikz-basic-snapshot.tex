@@ -1,0 +1,10 @@
+% Build from the pinned latex.fmt, retaining its hyphenation and character tables.
+% Only definitional libraries used by the public snippet wrapper are preloaded.
+\let\usepackage\RequirePackage
+\def\pgfsysdriver{pgfsys-dvisvgm.def}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,intersections,angles,quotes}
+\makeatletter
+\global\pgf@sys@id@count=0 \global\pgf@sys@svg@objectcount=0 \global\pgf@sys@svg@scopecount=0 \global\pgf@sys@svg@type@count=0
+\makeatother
+\dump

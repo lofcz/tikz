@@ -23,19 +23,22 @@ jobs:
       - run: npm run test:browser
       - name: Measure fresh-process rendering (no cross-request cache)
         run: npm run bench:cold
-      - name: Compare fresh renders with the published 0.2.1 baseline
+      - name: Compare fresh renders with the published 0.2.2 baseline
         if: matrix.node == '24'
         env:
           BENCH_ROUNDS: '3'
           BENCH_OUTPUT: cold-comparison.json
         run: |
           baseline=$(mktemp -d)
-          npm pack @lofcz/tikz@0.2.1 --ignore-scripts --pack-destination "$baseline"
-          tar -xzf "$baseline/lofcz-tikz-0.2.1.tgz" -C "$baseline"
+          npm pack @lofcz/tikz@0.2.2 --ignore-scripts --pack-destination "$baseline"
+          tar -xzf "$baseline/lofcz-tikz-0.2.2.tgz" -C "$baseline"
           node benchmarks/cold.mjs "$baseline/package" .
           node benchmarks/index.mjs
+          BENCH_ROUNDS=2 BENCH_HTTP_LATENCY_MS=20 BENCH_BROWSER_OUTPUT=browser-comparison.json node benchmarks/browser.mjs "$baseline/package" .
       - uses: actions/upload-artifact@v7
         if: matrix.node == '24'
         with:
           name: cold-render-comparison
-          path: cold-comparison.json
+          path: |
+            cold-comparison.json
+            browser-comparison.json

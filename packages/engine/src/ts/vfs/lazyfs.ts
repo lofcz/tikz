@@ -11,7 +11,7 @@
 
 export interface EmscriptenFS {
   mkdir(path: string, mode?: number): void;
-  writeFile(path: string, data: Uint8Array | string, opts?: { encoding?: string }): void;
+  writeFile(path: string, data: Uint8Array | string, opts?: { encoding?: string; canOwn?: boolean }): void;
   readFile(path: string, opts?: { encoding?: 'binary' | 'utf8' }): Uint8Array | string;
   analyzePath(path: string): { exists: boolean; object?: any; isRoot?: boolean };
   createFile(parent: string, name: string, properties: object, canRead: boolean, canWrite: boolean): any;
@@ -103,11 +103,11 @@ export function ensureLoaded(FS: EmscriptenFS, path: string): void {
 }
 
 /** Write a text or binary file, creating directories as needed. */
-export function writeFileDeep(FS: EmscriptenFS, path: string, data: Uint8Array | string): void {
+export function writeFileDeep(FS: EmscriptenFS, path: string, data: Uint8Array | string, canOwn = false): void {
   const i = path.lastIndexOf('/');
   if (i > 0) mkdirp(FS, path.slice(0, i));
   if (FS.analyzePath(path).exists) { try { FS.unlink(path); } catch { /* ignore */ } }
-  FS.writeFile(path, data);
+  FS.writeFile(path, data, { canOwn });
 }
 
 /**
@@ -141,4 +141,20 @@ export function listFiles(FS: EmscriptenFS, dir: string): string[] {
   };
   walk(dir);
   return out;
+}
+
+/** Borrow a completed MEMFS file; never retain a view into a module's WASM heap. */
+export function completedFileBytes(FS: EmscriptenFS, path: string, heap?: Uint8Array): Uint8Array {
+  const node = FS.lookupPath(path).node;
+  if (heap && node.contents instanceof Uint8Array && node.contents.buffer !== heap.buffer &&
+      Number.isSafeInteger(node.usedBytes) && node.usedBytes >= 0 && node.usedBytes <= node.contents.length)
+    return node.contents.subarray(0, node.usedBytes);
+  return FS.readFile(path, { encoding: 'binary' }) as Uint8Array;
+}
+
+/** Auxiliary inputs remain available, but are copied only if the consumer opens them. */
+export function writeDeferredFile(FS: EmscriptenFS, path: string, size: number, load: () => Uint8Array): void {
+  mkdirp(FS, path.slice(0, path.lastIndexOf('/')) || '/');
+  if (FS.analyzePath(path).exists) FS.unlink(path);
+  createLazyFile(FS, path, size, () => load().slice());
 }

@@ -62,6 +62,9 @@ try {
   assert.equal(errors.length, 0, errors.join('\n'));
   assert(!requests.some(url => url.includes('render-tikz') || url.includes('/api/')));
   assert(!requests.some(url => /\/mplib\.(wasm|mjs)/.test(url)), 'TikZ must never load MetaPost');
+  assert(ordinaryRequests.some(url => url.includes('/web2c/tikz-basic.fmt')), 'browser uses the basic precompiled format');
+  assert(!ordinaryRequests.some(url => url.includes('/web2c/tikz.fmt')), 'ordinary TikZ does not fetch the full format');
+  assert(requests.some(url => url.includes('/web2c/tikz.fmt')), 'pgfplots can use the full format');
   assert(!ordinaryRequests.some(url => /\/luatex\.(wasm|mjs)/.test(url)), 'ordinary TikZ must not load LuaTeX');
   assert(requests.some(url => /\/luatex\.wasm/.test(url)), 'graphdrawing loads LuaTeX on demand');
   console.log('PASS real browser WASM, pgfplots, image decoding, recovery, abort, timeout, queue and responsive UI', result);

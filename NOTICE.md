@@ -14,7 +14,9 @@ TeX macros and fonts. This is not an MIT-only distribution.
 
 Only the ten upstream default bundles are shipped. Optional Classico (AFPL),
 Ghostscript, latex-doc, OpenType and otf-fonts bundles are excluded. No Ghostscript
-engine is included. Native binaries and macro contents are unchanged. Bundle payloads are Brotli-compressed
+engine is included. Native binaries and macro contents are unchanged. The additional tikz-basic.fmt is
+built from the pinned latex.fmt and TikZ macros using the pinned tex.wasm; its
+recipe is packages/engine/bundles/tex/tikz-basic-snapshot.tex. Bundle payloads are Brotli-compressed
 without changing their contents. Our Node I/O decompresses them on demand and
 uses portable file URL handling. Engine glue supports lazy optional module loading
 and TeX-only execution without initializing MetaPost. Browser I/O still uses uncompressed assets.

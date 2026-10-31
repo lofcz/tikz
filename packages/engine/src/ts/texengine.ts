@@ -6,6 +6,7 @@ import type { EmscriptenFS } from './vfs/lazyfs.js';
 
 export interface TexModule {
   FS: EmscriptenFS;
+  HEAPU8?: Uint8Array;
   NODEFS?: unknown;
   ENV: Record<string, string>;
   callMain(args: string[]): number | undefined;

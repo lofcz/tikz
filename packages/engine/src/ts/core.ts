@@ -9,7 +9,7 @@ import { runDvisvgm, type DvisvgmFactory } from './dvisvgm.js';
 import { dviSpecials, describeLostPostScript } from './postscript.js';
 import type { Ghostscript } from './ghostscript.js';
 import { BundleSet, TEXMF_ROOT } from './vfs/bundle.js';
-import { listFiles, mkdirp, writeFileDeep, isUnloadedLazy, ensureLoaded, trackWrites, type EmscriptenFS } from './vfs/lazyfs.js';
+import { listFiles, mkdirp, writeFileDeep, writeDeferredFile, completedFileBytes, isUnloadedLazy, ensureLoaded, trackWrites, type EmscriptenFS } from './vfs/lazyfs.js';
 import { scanTexBlocks, scanInputs, type TexBlock } from './tex/scanner.js';
 import { TexBridge, MemorySnippetCache, resolveEngine, canonicalBody, type Snippet, type ResolvedEngine, type SnippetCache } from './tex/bridge.js';
 import { parseMetaPostLog } from './diagnostics.js';
@@ -217,10 +217,15 @@ export class MetaPostCore {
     this.texmfVar = kept;
   }
 
-  private copyUserFiles(T: TexModule): void {
+  private copyUserFiles(T: TexModule, deferred = false): void {
     // TeX may \input files the user supplied next to the job
     for (const [p, bytes] of this.userFiles) {
-      try { writeFileDeep(T.FS, p, this.M ? this.M.FS.readFile(p, { encoding: 'binary' }) as Uint8Array : bytes); } catch { /* ignore */ }
+      const data = typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes;
+      const load = () => this.M ? this.M.FS.readFile(p, { encoding: 'binary' }) as Uint8Array : data;
+      try {
+        if (deferred) writeDeferredFile(T.FS, p, this.M ? this.M.FS.stat(p).size : data.length, load);
+        else writeFileDeep(T.FS, p, load());
+      } catch { /* ignore */ }
     }
   }
 
@@ -429,12 +434,15 @@ export class MetaPostCore {
     // TeX Live's DVI-mode formats dvilualatex / dviluatex.
     let fmt: string = engine === 'plain' ? 'etex' : engine === 'lualatex' ? 'dvilualatex' : engine === 'luatex' ? 'dviluatex' : engine;
     const progname = engine === 'plain' ? 'etex' : lua ? fmt : engine;
-    // the pre-warmed snapshot: latex.fmt with pgf/pgfplots/tikz-cd preloaded
+    // Auto prefers basic TikZ; explicit plotting packages use the full snapshot.
     const snapshot = lo.snapshot ?? this.env.options.snapshot ?? 'auto';
     // (not for PDF output: the snapshot has PGF's dvisvgm driver built in)
     if (engine === 'latex' && snapshot !== 'none' && !pdfOut && this.hasSnapshot()) {
       const usesTikz = /\\usepackage\s*(\[[^\]]*\])?\s*\{[^}]*\b(tikz|pgfplots|tikz-cd)\b|\\documentclass\s*\[[^\]]*\btikz\b/.test(source);
-      if (snapshot === 'tikz' || usesTikz) fmt = 'tikz';
+      if (snapshot === 'tikz' || usesTikz) {
+        const full = snapshot === 'tikz' || /\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{[^}]*\b(?:pgfplots|pgfplotstable|tikz-cd)\b/.test(source);
+        fmt = !full && this.hasSnapshot('tikz-basic') ? 'tikz-basic' : 'tikz';
+      }
     }
     if (lo.files) this.addFiles(lo.files);
     // PGF's default DVI driver (dvips) draws with PostScript specials, which
@@ -474,7 +482,7 @@ export class MetaPostCore {
       collect: (M) => {
         if (lua) this.collectTexmfVar(M.FS);
         let out: Uint8Array | null;
-        try { out = M.FS.readFile(`/work/${outName}`, { encoding: 'binary' }) as Uint8Array; } catch { out = null; }
+        try { out = pdfOut ? M.FS.readFile(`/work/${outName}`, { encoding: 'binary' }) as Uint8Array : completedFileBytes(M.FS, `/work/${outName}`, M.HEAPU8); } catch { out = null; }
         if (pdfOut) pdf = out; else dvi = out;
         try { texLog = M.FS.readFile(`/work/${job}.log`, { encoding: 'utf8' }) as string; } catch { texLog = ''; }
         for (const p of listFiles(M.FS, '/work')) {
@@ -536,11 +544,11 @@ export class MetaPostCore {
           ...(gs ? { module: { gsBridge: gs.bridge() } } : {}),
           // Ghostscript opens files itself (an EPS is `(fig.eps) run`): it sees dvisvgm's /work and /texmf
           setup: (M) => {
-            mkdirp(M.FS, '/work'); this.installTexmf(M.FS, M.NODEFS); this.copyUserFiles(M);
+            mkdirp(M.FS, '/work'); this.installTexmf(M.FS, M.NODEFS); this.copyUserFiles(M, true);
             // what TeX wrote beside the job (an EPS from filecontents, say), as a native
             // dvisvgm run in the same directory would see it
-            for (const [name, data] of Object.entries(artifacts)) writeFileDeep(M.FS, `/work/${name}`, data);
-            writeFileDeep(M.FS, `/work/${job}.dvi`, dviBytes); M.FS.chdir('/work');
+            for (const [name, data] of Object.entries(artifacts)) writeDeferredFile(M.FS, `/work/${name}`, data.length, () => data);
+            writeFileDeep(M.FS, `/work/${job}.dvi`, dviBytes, true); M.FS.chdir('/work');
             // Ghostscript runs a document's PostScript without SAFER (dvisvgm asks for
             // -dDELAYSAFER and never sets it), so it gets only in-memory trees: /work, and
             // /texmf unless that is a real directory (texmfDir, mounted with NODEFS)
@@ -660,9 +668,9 @@ export class MetaPostCore {
     return { status, exitCode: r.exitCode, log: r.log, artifacts, diagnostics, stats: { totalMs } };
   }
 
-  private hasSnapshot(): boolean {
-    if (this.env.bundles) return this.env.bundles.files.has('web2c/tikz.fmt');
-    if (this.env.texmfDir) { try { return this.M.FS.analyzePath(`${TEXMF_ROOT}/web2c/tikz.fmt`).exists; } catch { return false; } }
+  private hasSnapshot(name = 'tikz'): boolean {
+    if (this.env.bundles) return this.env.bundles.files.has(`web2c/${name}.fmt`);
+    if (this.env.texmfDir) { try { return this.M.FS.analyzePath(`${TEXMF_ROOT}/web2c/${name}.fmt`).exists; } catch { return false; } }
     return false;
   }
 
