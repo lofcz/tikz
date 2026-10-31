@@ -14,6 +14,8 @@ W2C="$TL/texk/web2c"
 EMCC="${EMCC:-emcc}"
 JOBS="${JOBS:-8}"
 OPT="${TEX_OPT:--O2}"
+INITIAL_MEMORY="${TEX_INITIAL_MEMORY:-134217728}"
+LTO="${TEX_LTO:-0}"
 
 [ -f "$NB/texk/web2c/pdftex0.c" ] || { echo "error: run scripts/native-texlive.sh first (needs $NB/texk/web2c/pdftex0.c)" >&2; exit 1; }
 mkdir -p "$OUT/obj" "$OUT/include/w2c" "$OUT/include/kpathsea" "$DIST"
@@ -41,6 +43,7 @@ DEFS="-DHAVE_CONFIG_H -DPDF_PARSER_ONLY -D__SyncTeX__ -DSYNCTEX_ENGINE_H=\"synct
 CFLAGS="$OPT -w -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -fno-strict-aliasing"
 
 # Flag changes must invalidate objects as well as the final link.
+if [ "$LTO" = 1 ]; then CFLAGS="$CFLAGS -flto"; fi
 STAMP=$( { printf '%s' "$CFLAGS $DEFS $INC"; cat "$OUT/include/kpathsea/c-auto.h" "$REPO"/patches/kpathsea/*.patch; } | shasum | cut -d' ' -f1)
 if [ "$(cat "$OUT/obj/.flags" 2>/dev/null)" != "$STAMP" ]; then
   rm -f "$OUT"/obj/*.o
@@ -80,10 +83,10 @@ done
 for p in "${pids[@]}"; do wait "$p"; done
 
 echo "==> linking dist/tex.mjs"
-$EMCC $OPT -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -o "$DIST/tex.mjs" "${OBJS[@]}" \
+$EMCC $CFLAGS -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -o "$DIST/tex.mjs" "${OBJS[@]}" \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createTex \
   -sENVIRONMENT=web,worker,node \
-  -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 -sMAXIMUM_MEMORY=2147483648 \
+  -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY="$INITIAL_MEMORY" -sMAXIMUM_MEMORY=2147483648 \
   -sSTACK_SIZE=8388608 \
   -sFILESYSTEM=1 -sFORCE_FILESYSTEM=1 \
   -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 \

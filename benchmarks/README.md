@@ -31,3 +31,31 @@ less per-render decompression. A single file larger than that target remains
 intact. No result or initialized-engine cache is shared across requests. Raw SVG
 worker output also removes JSON escaping/parsing and a duplicate UTF-8 encoding;
 this is a reduction in copying, not a claimed end-to-end speedup.
+
+## Clean CI comparison
+
+[Node 24 CI run 41170467760](https://github.com/lofcz/tikz/actions/runs/41170467760)
+passed all tests and output comparisons. Medians of three fresh processes:
+
+| Fixture | 0.2.1 time → candidate | 0.2.1 peak RSS → candidate |
+| --- | ---: | ---: |
+| Line and math | 510.22 → 420.96 ms | 181.52 → 164.99 MiB |
+| pgfplots | 769.68 → 694.70 ms | 187.60 → 155.03 MiB |
+| LuaTeX graph | 1,070.61 → 934.51 ms | 230.38 → 202.02 MiB |
+| 756-node drawing | 4,536.71 → 4,466.75 ms | 188.28 → 163.90 MiB |
+
+These are runner measurements, not a Vercel latency guarantee.
+
+## Native tuning
+
+The source build now exposes `TEX_INITIAL_MEMORY`, `DVISVGM_INITIAL_MEMORY`,
+`TEX_LTO`, and the existing `TEX_OPT`/`DVISVGM_OPT`. Defaults remain TeX 128 MiB,
+dvisvgm 64 MiB, `-O2`/`-Oz`, and no LTO. Build flags invalidate compiled objects;
+parallel compiler failures propagate instead of being hidden by a bare `wait`.
+
+The C23 `-O3`/LTO/64 MiB TeX candidate passed the same four SVG comparisons but
+increased tex.wasm from 1,130,229 to 1,278,876 bytes, with no consistent peak-RSS
+reduction. Native timing samples were collected under shared-host load and do not
+justify changing production defaults. The release retains pinned native binaries;
+local native build outputs cannot silently replace them during package assembly.
+Use the build controls for further controlled comparisons, not as runtime options.

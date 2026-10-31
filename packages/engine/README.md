@@ -734,3 +734,12 @@ Martin Gieseking; PGF/TikZ by Till Tantau and its maintainers; all from TeX
 Live 2025. PSTricks by Timothy Van Zandt, maintained by Herbert Voß. Ghostscript
 by Artifex Software, built to WebAssembly by the Ghostscript port. Built with
 Emscripten.
+
+### Native tuning experiments
+
+`build-tex-wasm.sh` accepts `TEX_OPT`, `TEX_LTO=1` and `TEX_INITIAL_MEMORY` (bytes).
+`build-dvisvgm-wasm.sh` accepts `DVISVGM_OPT` and `DVISVGM_INITIAL_MEMORY`.
+Defaults are unchanged. Build TeX before dvisvgm, which shares its kpathsea
+objects; do not rebuild those objects while dvisvgm is linking. The dvisvgm WASM
+configuration uses the optional JavaScript Ghostscript bridge even when the host
+has a native libgs installation. Local binaries are not automatically published.
