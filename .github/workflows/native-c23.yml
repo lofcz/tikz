@@ -1,0 +1,51 @@
+name: Native C23 compatibility
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/patches/pdftex/**'
+      - 'packages/engine/scripts/native-*.sh'
+      - 'packages/engine/scripts/prepare-pdftex-source.sh'
+      - 'packages/engine/scripts/test-pdftex-c23.sh'
+      - '.github/workflows/native-c23.yml'
+  pull_request:
+    paths:
+      - 'packages/engine/patches/pdftex/**'
+      - 'packages/engine/scripts/native-*.sh'
+      - 'packages/engine/scripts/prepare-pdftex-source.sh'
+      - 'packages/engine/scripts/test-pdftex-c23.sh'
+      - '.github/workflows/native-c23.yml'
+permissions:
+  contents: read
+jobs:
+  pdftex:
+    runs-on: ubuntu-latest
+    container: gcc:16.2.0
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/engine
+    env:
+      CC: gcc
+      CXX: g++
+      CFLAGS: '-O2 -std=gnu23'
+      JOBS: '4'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Confirm C23 keywords and language version
+        run: |
+          gcc --version
+          printf 'static_assert(__STDC_VERSION__ >= 202311L); bool enabled = true;\n' | gcc -std=gnu23 -x c -c -o /tmp/c23.o -
+      - name: Fetch checksum-pinned TeX sources
+        run: |
+          bash scripts/extract-vendor.sh
+          sha256sum vendor/texlive-source/texk/web2c/pdftexdir/pdftex.web > /tmp/pdftex-source.sha
+      - name: Build native pdfTeX and utilities with C23
+        run: bash scripts/native-texlive.sh
+      - name: Exercise renamed conversion flag
+        run: bash scripts/test-pdftex-c23.sh
+      - name: Verify repeatable patching and unchanged upstream source
+        run: |
+          bash scripts/prepare-pdftex-source.sh
+          sha256sum -c /tmp/pdftex-source.sha

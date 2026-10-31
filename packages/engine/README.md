@@ -5,6 +5,9 @@
 > opt-in `lazy: true` engine loading for TeX-only workloads.
 > Browser deployments continue to use the original uncompressed bundle layout.
 > Upstream documentation and native build instructions follow.
+> The native pdfTeX build patches the WEB source in its build directory to avoid
+> the C23 `bool` keyword. It keeps the pinned upstream source unchanged and is
+> verified with GCC 16 in C23 mode, including the affected conversion primitives.
 
 # mp-tikz-wasm
 

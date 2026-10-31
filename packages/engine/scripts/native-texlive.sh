@@ -37,6 +37,7 @@ native_package texk/kpathsea
 for lib in zlib libpng xpdf; do native_package libs/$lib; done
 echo "==> web2c: pdftex (generates the web2c C)"
 native_configure texk/web2c
+bash "$REPO/scripts/prepare-pdftex-source.sh"
 native_build texk/web2c pdftex
 ls -l texk/web2c/pdftex texk/web2c/pdftex0.c
 echo "==> native pdftex: $(texk/web2c/pdftex --version | head -1)"
