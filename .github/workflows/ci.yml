@@ -21,3 +21,5 @@ jobs:
       - run: npm run check
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Measure fresh-process rendering (no cross-request cache)
+        run: npm run bench:cold

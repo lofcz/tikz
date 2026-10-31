@@ -3,9 +3,9 @@
 import { readFileSync } from 'node:fs';
 import { MetaPost } from '../runtime/dist/index.js';
 const { source } = JSON.parse(readFileSync(0, 'utf8'));
-const engine = await MetaPost.create({ worker: false, logLevel: 'silent' });
+const engine = await MetaPost.create({ worker: false, lazy: true, logLevel: 'silent' });
 try {
-  const result = await engine.latex(source, { fonts: 'paths' });
+  const result = await engine.latex(source, { engine: 'auto', fonts: 'paths' });
   if (result.status === 'error' || result.status === 'fatal' || result.pages?.length !== 1)
     throw new Error('TikZ requires one valid page. ' + JSON.stringify(result.diagnostics).slice(0, 2000));
   process.stdout.write(JSON.stringify({ svg: result.pages[0] }));

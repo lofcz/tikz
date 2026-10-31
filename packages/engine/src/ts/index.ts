@@ -54,23 +54,27 @@ class InProcessBackend implements Backend {
       this.bundles.logger = this.logger;
       const base = o.bundleBaseUrl ?? new URL('./bundles/', here).href;
       await this.bundles.addAll(resolveBundleSpecs(o.bundles ?? DEFAULT_BUNDLES, base));
-      await this.bundles.prefetchEager();
-      await this.bundles.loadHot((base.endsWith('/') ? base : base + '/') + 'hot.json');
+      if (!o.lazy || !this.bundles.canFetchSync) await this.bundles.prefetchEager();
+      if (!o.lazy) await this.bundles.loadHot((base.endsWith('/') ? base : base + '/') + 'hot.json');
       if (!this.bundles.canFetchSync) await this.bundles.prefetchAll();
     }
-    const mplibFactory = o.modules?.mplib ?? (await import(/* @vite-ignore */ new URL('./mplib.mjs', here).href)).default;
+    const lazyFactory = (name: string) => async (opts?: Record<string, unknown>) => {
+      const module = await import(/* @vite-ignore */ new URL(`./${name}.mjs`, here).href);
+      return module.default(opts);
+    };
+    const mplibFactory = o.modules?.mplib ?? (o.lazy ? lazyFactory('mplib') : (await import(/* @vite-ignore */ new URL('./mplib.mjs', here).href)).default);
     let texFactory = o.modules?.tex;
     if (!texFactory && (o.tex ?? 'auto') !== 'none') {
-      try { texFactory = (await import(/* @vite-ignore */ new URL('./tex.mjs', here).href)).default; } catch { texFactory = undefined; }
+      try { texFactory = o.lazy ? lazyFactory('tex') : (await import(/* @vite-ignore */ new URL('./tex.mjs', here).href)).default; } catch { texFactory = undefined; }
     }
     let dvisvgmFactory = o.modules?.dvisvgm;
     if (!dvisvgmFactory && texFactory) {
-      try { dvisvgmFactory = (await import(/* @vite-ignore */ new URL('./dvisvgm.mjs', here).href)).default; } catch { dvisvgmFactory = undefined; }
+      try { dvisvgmFactory = o.lazy ? lazyFactory('dvisvgm') : (await import(/* @vite-ignore */ new URL('./dvisvgm.mjs', here).href)).default; } catch { dvisvgmFactory = undefined; }
     }
     // luatex.wasm: the factory is cheap to import; the 4 MB module is only fetched on the first lualatex run
     let luatexFactory = o.modules?.luatex;
     if (!luatexFactory && texFactory) {
-      try { luatexFactory = (await import(/* @vite-ignore */ new URL('./luatex.mjs', here).href)).default; } catch { luatexFactory = undefined; }
+      try { luatexFactory = o.lazy ? lazyFactory('luatex') : (await import(/* @vite-ignore */ new URL('./luatex.mjs', here).href)).default; } catch { luatexFactory = undefined; }
     }
     const gsBase = o.ghostscriptBaseUrl ?? new URL('./ghostscript/', here).href;
     const ghostscript = dvisvgmFactory && ghostscriptWanted(o.ghostscript, o.bundles ?? DEFAULT_BUNDLES)
@@ -104,7 +108,14 @@ class InProcessBackend implements Backend {
     for (const spec of resolveBundleSpecs(bundles, base)) if (!this.bundles.manifests.some((m) => m.spec.name === spec.name)) await this.bundles.add(spec);
     await this.bundles.prefetchAll((f) => bundles.includes(f.bundle));
   }
-  async prefetch(kinds: PrefetchKind[]) { return this.bundles ? this.bundles.prefetchHot(kinds) : 0; }
+  async prefetch(kinds: PrefetchKind[]) {
+    if (!this.bundles) return 0;
+    if (!Object.keys(this.bundles.hot).length) {
+      const base = this.options.bundleBaseUrl ?? new URL('./bundles/', import.meta.url).href;
+      await this.bundles.loadHot((base.endsWith('/') ? base : base + '/') + 'hot.json');
+    }
+    return this.bundles.prefetchHot(kinds);
+  }
   setLogLevel(level: LogLevel) { this.logger.level = level; }
   dispose() { /* nothing to terminate */ }
 }

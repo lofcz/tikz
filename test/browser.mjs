@@ -9,8 +9,10 @@ import { copyTikzBrowserAssets } from '../src/deploy.js';
 const root = await mkdtemp(join(tmpdir(), 'tikz-browser-'));
 await copyTikzBrowserAssets(root);
 const requests = [];
+let ordinaryRequests = [];
 const server = createServer(async (req, res) => {
   requests.push(req.url);
+  if (req.url === "/checkpoint") { ordinaryRequests = [...requests]; res.end("ok"); return; }
   const path = resolve(root, '.' + new URL(req.url, 'http://local').pathname);
   if (!path.startsWith(root + '/')) { res.end('<!doctype html><title>TikZ browser verification</title>'); return; }
   try {
@@ -32,9 +34,14 @@ try {
     let ticks = 0; const timer = setInterval(() => ticks++, 10);
     const source = String.raw`\begin{tikzpicture}\draw[blue,thick] (0,0) circle (1);\node at (0,0) {$\frac{1}{2}$};\end{tikzpicture}`;
     const image = await renderer.render(source);
+    await fetch("/checkpoint");
     const plot = await renderer.render(String.raw`\documentclass[tikz]{standalone}
 \usepackage{pgfplots}\pgfplotsset{compat=1.18}\begin{document}
 \begin{tikzpicture}\begin{axis}[width=6cm,height=4cm]\addplot[domain=-2:2] {x^2};\end{axis}\end{tikzpicture}\end{document}`);
+    const graph = await renderer.render(String.raw`\documentclass[tikz]{standalone}
+\usetikzlibrary{graphs,graphdrawing}\usegdlibrary{trees}
+\begin{document}\begin{tikzpicture}\graph [tree layout] {a -> {b,c}};
+\end{tikzpicture}\end{document}`);
     const bad = await renderer.render(String.raw`\begin{tikzpicture}\notACommand\end{tikzpicture}`).then(() => false, () => true);
     const recovered = await renderer.render(source);
     const active = new AbortController();
@@ -47,12 +54,15 @@ try {
     const queue = await limited.render(source).then(() => false, e => /busy/.test(e.message));
     const timeoutOk = await timeout; limited.dispose(); clearInterval(timer);
     const img = document.createElement('img'); img.src = image.dataUrl; document.body.append(img); await img.decode();
-    return { width: image.width, height: image.height, plot: plot.width, recovered: recovered.width, bad, abortOk, timeoutOk, queue, ticks, naturalWidth: img.naturalWidth };
+    return { width: image.width, height: image.height, plot: plot.width, graph: graph.width, recovered: recovered.width, bad, abortOk, timeoutOk, queue, ticks, naturalWidth: img.naturalWidth };
   });
-  assert(result.width > 0 && result.height > 0 && result.plot > 0 && result.recovered > 0 && result.naturalWidth > 0);
+  assert(result.width > 0 && result.height > 0 && result.plot > 0 && result.graph > 0 && result.recovered > 0 && result.naturalWidth > 0);
   for (const key of ['bad','abortOk','timeoutOk','queue']) assert(result[key], key);
   assert(result.ticks > 10, 'UI thread stayed responsive');
   assert.equal(errors.length, 0, errors.join('\n'));
   assert(!requests.some(url => url.includes('render-tikz') || url.includes('/api/')));
+  assert(!requests.some(url => /\/mplib\.(wasm|mjs)/.test(url)), 'TikZ must never load MetaPost');
+  assert(!ordinaryRequests.some(url => /\/luatex\.(wasm|mjs)/.test(url)), 'ordinary TikZ must not load LuaTeX');
+  assert(requests.some(url => /\/luatex\.wasm/.test(url)), 'graphdrawing loads LuaTeX on demand');
   console.log('PASS real browser WASM, pgfplots, image decoding, recovery, abort, timeout, queue and responsive UI', result);
 } finally { await browser.close(); server.closeAllConnections(); await new Promise(r => server.close(r)); await rm(root, { recursive: true, force: true }); }

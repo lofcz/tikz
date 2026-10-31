@@ -16,7 +16,8 @@ Only the ten upstream default bundles are shipped. Optional Classico (AFPL),
 Ghostscript, latex-doc, OpenType and otf-fonts bundles are excluded. No Ghostscript
 engine is included. Native binaries and macro contents are unchanged. Bundle payloads are Brotli-compressed
 without changing their contents. Our Node I/O decompresses them on demand and
-uses portable file URL handling. Browser I/O still uses uncompressed assets.
+uses portable file URL handling. Engine glue supports lazy optional module loading
+and TeX-only execution without initializing MetaPost. Browser I/O still uses uncompressed assets.
 
 Corresponding upstream source, patches and reproducible build instructions:
 https://github.com/jmckalex/mp-tikz-wasm/tree/d44aeeba98b0e60d13c35dfd080076e6b05c68b5

@@ -47,3 +47,11 @@ test('enforces output size and validates configuration', async () => {
   assert.throws(() => createTikzRenderer({ concurrency: 0 }), /Invalid/);
   await assert.rejects(createTikzRenderer({ maxOutputBytes: 20 }).render(picture), /output too large/);
 });
+
+test('automatically selects LuaTeX for standard graphdrawing source', async () => {
+  const image = await renderTikz(String.raw`\documentclass[tikz]{standalone}
+\usetikzlibrary{graphs,graphdrawing}\usegdlibrary{trees}
+\begin{document}\begin{tikzpicture}\graph [tree layout] {a -> {b,c}};
+\end{tikzpicture}\end{document}`);
+  assert(image.width > 0 && image.height > 0);
+});

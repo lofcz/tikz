@@ -92,7 +92,8 @@ export class MetaPostCore {
   private cache: SnippetCache = new MemorySnippetCache();
   private bridge?: TexBridge;
   readonly version: { metapost: string; tex: string; build: string } = { metapost: '', tex: 'pdfTeX 1.40.27 (DVI)', build: '' };
-  private userFiles = new Set<string>();
+  private userFiles = new Map<string, string | Uint8Array>();
+  private mplibReady?: Promise<void>;
   /**
    * luaotfload's font cache (TEXMF_VAR), carried from one LuaTeX run to the
    * next. Parsing an OpenType face costs about a second, and every TeX run
@@ -103,7 +104,13 @@ export class MetaPostCore {
 
   constructor(private env: CoreEnv) {}
 
-  async init(): Promise<void> {
+  async init(eager = !this.env.options.lazy): Promise<void> {
+    if (!eager) return;
+    this.mplibReady ??= this.initMetaPost();
+    await this.mplibReady;
+  }
+
+  private async initMetaPost(): Promise<void> {
     const o = this.env.options;
     this.progress({ phase: 'loading', detail: 'mplib.wasm' });
     // mplib's own stdout/stderr (dvitomp, the runtime) and, through the termLine hook, MetaPost's terminal
@@ -118,6 +125,7 @@ export class MetaPostCore {
     mkdirp(FS, '/work');
     this.installTexmf(FS, this.M.NODEFS);
     FS.chdir('/work');
+    for (const [path, bytes] of this.userFiles) writeFileDeep(FS, path, bytes);
     mpxAddPath(this.M, `${TEXMF_ROOT}/fonts/tfm`);
     mpxAddPath(this.M, `${TEXMF_ROOT}/fonts/vf`);
     this.M.mpwasmHooks = {
@@ -211,8 +219,8 @@ export class MetaPostCore {
 
   private copyUserFiles(T: TexModule): void {
     // TeX may \input files the user supplied next to the job
-    for (const p of this.userFiles) {
-      try { writeFileDeep(T.FS, p, this.M.FS.readFile(p, { encoding: 'binary' }) as Uint8Array); } catch { /* ignore */ }
+    for (const [p, bytes] of this.userFiles) {
+      try { writeFileDeep(T.FS, p, this.M ? this.M.FS.readFile(p, { encoding: 'binary' }) as Uint8Array : bytes); } catch { /* ignore */ }
     }
   }
 
@@ -285,8 +293,8 @@ export class MetaPostCore {
   addFiles(files: Record<string, string | Uint8Array>): void {
     for (const [name, data] of Object.entries(files)) {
       const p = name.startsWith('/') ? name : `/work/${name}`;
-      writeFileDeep(this.M.FS, p, data);
-      this.userFiles.add(p);
+      if (this.M) writeFileDeep(this.M.FS, p, data);
+      this.userFiles.set(p, typeof data === 'string' ? data : data.slice());
     }
   }
 
@@ -296,7 +304,7 @@ export class MetaPostCore {
    * typesetting one document after another would hand the first one's .aux to the next.
    */
   removeFiles(names?: string[]): void {
-    const paths = names ? names.map((n) => (n.startsWith('/') ? n : `/work/${n}`)) : [...this.userFiles];
+    const paths = names ? names.map((n) => (n.startsWith('/') ? n : `/work/${n}`)) : [...this.userFiles.keys()];
     for (const p of paths) {
       if (!this.userFiles.delete(p)) continue;
       try { this.M.FS.unlink(p); } catch { /* ignore */ }
@@ -306,6 +314,7 @@ export class MetaPostCore {
   clearCache(): void { this.cache.clear(); }
 
   async run(source: string, ro: RunOptions = {}): Promise<RunResult> {
+    await this.init(true);
     const o = this.env.options;
     const t0 = now();
     this.stats = { totalMs: 0, metapostMs: 0, texMs: 0, texRuns: 0, metapostRuns: 0, snippetCacheHits: 0, snippetCacheMisses: 0 };

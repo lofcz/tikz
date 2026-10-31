@@ -28,6 +28,12 @@ are accepted unchanged. Snippets receive a standalone wrapper and the standard
 calc, intersections, angles, quotes, arrows.meta and positioning libraries.
 pgfplots is available through `\usepackage{pgfplots}` in a complete document.
 
+Both entries enable the fork's lazy engine loading: TikZ skips MetaPost WASM,
+optional glue loads only when used, and graph-drawing documents automatically
+select LuaTeX. Each document still gets a fresh TeX/WASM execution state. These
+savings do not require cross-request caches, including on Vercel Fluid Node
+functions. The server entry keeps CPU-bound TeX outside the shared request loop.
+
 ## Limits and cancellation
 
 One page; 12,000 source characters; 30 seconds per execution and queue wait;
@@ -96,6 +102,8 @@ the full package including `runtime/`; copying only JavaScript is insufficient.
 ```sh
 npm ci
 npm run check
+npm run test:browser
+npm run bench:cold
 ```
 
 The engine source lives in `packages/engine`, imported from upstream v0.5.0 as a
