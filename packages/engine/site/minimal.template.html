@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mp-tikz-wasm Editors</title>
+__FAVICON__
+__FONTS__
+<style>
+__THEME_CSS__
+  body { font-family: var(--ui); font-size: 15px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 clamp(14px, 3vw, 32px) 48px; }
+  .masthead { padding: 34px 0 4px; }
+  h1 { font: 600 clamp(28px, 4.4vw, 40px)/1.1 var(--display); letter-spacing: -.015em; margin: 6px 0 10px; }
+  .masthead p { margin: 0; color: var(--ink-2); max-width: 84ch; font: 17px/1.55 var(--body); }
+  .masthead .status-line { margin-top: 14px; }
+  .row { margin-top: 20px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .row { grid-template-columns: minmax(0, 1fr); } }
+  .pane { min-height: 380px; }
+  .pane > .bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  .pane > .bar b { color: var(--ink); font: 600 16px var(--display); }
+  .pane > .bar .ms { margin-left: auto; font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+  .out { flex: 1; display: flex; align-items: center; justify-content: center; padding: 18px; min-height: 320px; }
+  .out svg { max-width: 100%; height: auto; }
+  .errors { font: 12.5px/1.45 var(--mono); color: var(--bad); background: var(--bad-soft); border-top: 1px solid var(--line); padding: 8px 14px; white-space: pre-wrap; max-height: 140px; overflow: auto; }
+  .errors:empty { display: none; }
+  footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font: 14px/1.6 var(--body); max-width: 100ch; }
+  __CM_CSS__
+  /* CodeMirror, dark in both themes like every code block on these pages */
+  .CodeMirror { flex: 1; height: auto; min-height: 330px; font: 13px/1.55 var(--mono); background: var(--code); color: var(--code-ink); }
+  .CodeMirror-gutters { background: var(--code-2); border-right: 1px solid rgba(255,255,255,.06); }
+  .CodeMirror-linenumber { color: var(--code-muted); }
+  .CodeMirror-cursor { border-left-color: #f2cd7b; }
+  .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected, .CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection { background: rgba(134, 173, 233, .28); }
+  .CodeMirror-activeline-background { background: rgba(255,255,255,.04); }
+  .cm-s-default .cm-keyword, .cm-s-default .cm-tag { color: #9cc2ff; } .cm-s-default .cm-comment { color: #8fa0b0; font-style: italic; }
+  .cm-s-default .cm-string { color: #cfe3a8; } .cm-s-default .cm-string-2 { color: #dcb3e6; } .cm-s-default .cm-number, .cm-s-default .cm-atom { color: #f2cd7b; }
+  .cm-s-default .cm-variable, .cm-s-default .cm-variable-2 { color: var(--code-ink); } .cm-s-default .cm-operator { color: #ecb07a; } .cm-s-default .cm-bracket { color: #b8c4d0; } .cm-s-default .cm-builtin { color: #dcb3e6; }
+</style>
+<script>
+__THEME_JS__
+</script>
+</head>
+<body>
+__SITEBAR:minimal__
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">mp-tikz-wasm · two editors</div>
+  <h1>MetaPost and TikZ, running in your browser</h1>
+  <p>Edit either source; the figure is typeset again as you type. MetaPost 2.11, pdfTeX and dvisvgm compiled to WebAssembly, with real LaTeX for the labels — no server involved. <a href="__GUIDE_URL__">Feature guide</a> · <a href="__REPO_URL__">Source and downloads</a></p>
+  <div class="status-line"><span class="dot busy"></span><span id="status">Loading the engine…</span></div>
+</header>
+
+<div class="row">
+  <div class="pane card"><div class="bar"><b>MetaPost</b> <span>with a LaTeX label</span><span class="ms" id="ms-mp"></span></div><textarea id="src-mp"></textarea></div>
+  <div class="pane card"><div class="bar"><b>Output</b> <span>SVG with glyph outlines</span></div><div class="out paper" id="out-mp"><span class="placeholder">waiting for the engine…</span></div><div class="errors" id="err-mp"></div></div>
+</div>
+<div class="row">
+  <div class="pane card"><div class="bar"><b>TikZ</b> <span>a complete LaTeX document</span><span class="ms" id="ms-tikz"></span></div><textarea id="src-tikz"></textarea></div>
+  <div class="pane card"><div class="bar"><b>Output</b> <span>one SVG per page</span></div><div class="out paper" id="out-tikz"><span class="placeholder">waiting for the engine…</span></div><div class="errors" id="err-tikz"></div></div>
+</div>
+
+<footer id="foot">MetaPost by John Hobby (mplib, TeX Live 2025); pdfTeX; dvisvgm by Martin Gieseking. Editors: CodeMirror. Everything on this page runs in a Web Worker in your browser; fonts and macro packages are fetched on demand and cached.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js"></script>
+__SOURCES_SCRIPT__
+__COMMON_SCRIPT__
+__BOOT__
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const S = globalThis.PAGE_SOURCES;
+const edMp = CodeMirror.fromTextArea($('#src-mp'), { value: S.metapost, mode: 'metapost', lineNumbers: true, lineWrapping: true, viewportMargin: Infinity });
+const edTikz = CodeMirror.fromTextArea($('#src-tikz'), { value: S.tikz, mode: 'stex', lineNumbers: true, lineWrapping: true, viewportMargin: Infinity });
+edMp.setValue(S.metapost); edTikz.setValue(S.tikz);
+let mp;
+const show = (id, svg, ms, errs) => {
+  const out = $('#out-' + id); out.innerHTML = svg || '<span class="placeholder">no output</span>';
+  const el = out.querySelector('svg');     // show figures at 1.6x their natural size, within the pane
+  if (el) { const w = parseFloat(el.getAttribute('width')) * (/pt$/.test(el.getAttribute('width') || '') ? 96 / 72 : 1); if (w) { el.removeAttribute('height'); el.style.width = `min(100%, ${Math.round(w * 1.6)}px)`; } }
+  $('#ms-' + id).textContent = ms;
+  $('#err-' + id).textContent = errs.map((d) => `${d.line ? 'line ' + d.line + ': ' : ''}${d.message}`).join('\n');
+};
+const renderMp = makeQueue(async (src) => {
+  const r = await mp.run(src, { format: 'svg', svg: { idPrefix: 'mp-' } });
+  show('mp', r.figures.map((f) => f.svg).join(''), `${r.stats.metapostMs.toFixed(0)} ms MetaPost${r.stats.texRuns ? ` + ${r.stats.texMs.toFixed(0)} ms TeX` : ''}`, r.diagnostics.filter((d) => d.severity === 'error' || d.severity === 'fatal'));
+});
+const renderTikz = makeQueue(async (src) => {
+  const r = await mp.latex(src, { engine: 'auto', svg: { idPrefix: 'tz-', precision: false } });
+  show('tikz', r.pages.join(''), `${r.stats.texMs.toFixed(0)} ms ${/lua/.test(r.format) ? 'LuaTeX' : 'TeX'} + ${r.stats.dvisvgmMs.toFixed(0)} ms dvisvgm`, r.diagnostics.filter((d) => d.severity === 'error' || d.severity === 'fatal'));
+});
+try {
+  mp = await globalThis.enginePromise;
+  $('#status').textContent = `Engine ready: MetaPost ${mp.version.metapost}.`;
+  document.querySelector('.masthead .dot').className = 'dot ok';
+  renderMp(edMp.getValue()); renderTikz(edTikz.getValue());
+  edMp.on('change', debounce(() => renderMp(edMp.getValue()), 350));
+  edTikz.on('change', debounce(() => renderTikz(edTikz.getValue()), 500));
+} catch (e) {
+  $('#status').textContent = `The engine could not start here: ${e.message}`;
+  document.querySelector('.masthead .dot').className = 'dot bad';
+}
+</script>
+</body>
+</html>

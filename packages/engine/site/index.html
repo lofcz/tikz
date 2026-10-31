@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mp-tikz-wasm Gallery</title>
+<meta name="description" content="A gallery of MetaPost, TikZ, LaTeX, LuaTeX and OpenType examples with a live editor, typeset in the browser by WebAssembly builds of MetaPost, pdfTeX, LuaTeX and dvisvgm.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229.5%22%20fill%3D%22none%22%20stroke%3D%22%231f4e9c%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M3.6%2015.2C7%205.5%2010.6%2018.5%2020.4%208.6%22%20fill%3D%22none%22%20stroke%3D%22%23b5651d%22%20stroke-width%3D%221.9%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="./theme.css">
+<script src="./theme.js"></script>
+<style>
+  body { font-family: var(--ui); font-size: 15px; }
+  .intro { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 24px; padding: 18px clamp(16px, 3vw, 32px) 14px; }
+  .intro h1 { font: 600 clamp(22px, 3vw, 28px)/1.15 var(--display); letter-spacing: -.01em; margin: 0; }
+  .intro p { margin: 4px 0 0; color: var(--muted); max-width: 86ch; font-size: 14px; }
+  .intro .status-line { margin-left: auto; max-width: 100%; }
+  .intro .status-line > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+
+  /* the workbench: gallery | editor | output */
+  .workbench { display: grid; grid-template-columns: 272px minmax(0, 1fr) minmax(0, 1.08fr); gap: 14px; padding: 0 clamp(16px, 3vw, 32px) 18px; height: calc(100vh - 150px); min-height: 560px; }
+  .gallery { overflow: auto; padding: 4px 6px 10px 0; scrollbar-width: thin; }
+  .gallery h2 { display: flex; align-items: center; gap: 8px; font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 16px 8px 6px; }
+  .gallery h2:first-child { margin-top: 6px; }
+  .gallery h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .gallery .group { display: grid; gap: 2px; }
+  .gallery button { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; width: 100%; text-align: left; background: none; border: 1px solid transparent; padding: 7px 9px; border-radius: 8px; color: var(--ink); font: 14px/1.3 var(--ui); cursor: pointer; }
+  .gallery button:hover { background: var(--surface); border-color: var(--line); }
+  .gallery button.active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--ink); }
+  .gallery button.active .t { color: var(--accent); font-weight: 500; }
+  .gallery button .chip { font-size: 10px; padding: 3px 6px; max-width: 118px; overflow: hidden; text-overflow: ellipsis; }
+
+  .editor, .output { min-height: 0; }
+  .toolbar { display: flex; gap: 8px 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; background: var(--surface); }
+  .toolbar .sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 2px; }
+  .toolbar .opts { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+  #source { flex: 1; width: 100%; min-height: 260px; resize: none; border: 0; padding: 14px 16px; background: var(--code); color: var(--code-ink); font: 13px/1.55 var(--mono); tab-size: 2; outline: none; }
+  .about { padding: 12px 16px 14px; border-top: 1px solid var(--line); background: var(--surface-2); }
+  .about .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  #blurb { color: var(--ink-2); font: 14px/1.5 var(--body); margin: 0; }
+
+  .tabs { display: flex; align-items: center; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); background: var(--surface); overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button[data-pane] { font: 500 13px var(--ui); padding: 7px 12px; border: 1px solid transparent; border-bottom: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 6px 6px 0 0; margin-bottom: -1px; white-space: nowrap; }
+  .tabs button[data-pane]:hover { color: var(--ink); }
+  .tabs button[data-pane].active { color: var(--ink); background: var(--bg); border-color: var(--line); }
+  .tabs button.attention::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--bad); margin-left: 6px; vertical-align: 2px; }
+  .tabs .btn { margin: 0 0 6px auto; padding: 5px 10px; font-size: 12px; }
+  .pane { flex: 1; overflow: auto; padding: 16px; min-height: 0; }
+  .pane:not(.paper) { background: var(--bg); }
+  #preview { display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 12px; }
+  #preview svg { max-width: 100%; height: auto; }
+  #preview .placeholder { margin: auto; }
+  .pane pre { margin: 0; font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; color: var(--ink-2); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  .stat b { display: block; font: 500 19px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .stats-note { color: var(--muted); font-size: 13px; }
+
+  footer { padding: 18px clamp(16px, 3vw, 32px) 28px; color: var(--muted); font: 14px/1.6 var(--body); border-top: 1px solid var(--line); }
+  footer p { max-width: 110ch; margin: 0 0 8px; }
+  footer b { color: var(--ink); }
+
+  @media (max-width: 1180px) {
+    .workbench { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); height: auto; }
+    .gallery { grid-column: 1 / -1; max-height: 260px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 4px 10px 10px; }
+    .gallery .group { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    .editor, .output { height: 78vh; min-height: 480px; }
+  }
+  @media (max-width: 760px) {
+    .workbench { grid-template-columns: minmax(0, 1fr); padding: 0 12px 14px; gap: 12px; }
+    .intro { padding: 14px 12px 12px; }
+    .intro .status-line { margin-left: 0; }
+    .gallery { max-height: 230px; }
+    .gallery .group { grid-template-columns: 1fr; }
+    .editor { height: auto; min-height: 0; }
+    #source { min-height: 300px; height: 46vh; }
+    .output { height: auto; min-height: 0; }
+    .pane { min-height: 320px; max-height: 70vh; }
+    .toolbar .sep { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="sitebar">
+  <a class="brand" href="guide.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 15.2C7 5.5 10.6 18.5 20.4 8.6" fill="none" stroke="#b5651d" stroke-width="1.9" stroke-linecap="round"/></svg>mp-tikz-wasm</a>
+  <nav aria-label="Demo pages"><a href="guide.html">Guide</a><a href="index.html" aria-current="page">Gallery</a><a href="tags.html">Tags</a><a href="live.html">Live</a><a href="minimal.html">Editors</a><a href="standalone.html">Single file</a></nav>
+  <a class="gh" href="https://github.com/jmckalex/mp-tikz-wasm">GitHub ↗</a>
+  <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg></button>
+</header>
+<div class="intro">
+  <div>
+    <h1>MetaPost &amp; TikZ in the browser</h1>
+    <p>MetaPost 2.11, pdfTeX 1.40, LuaTeX 1.21 and dvisvgm 3.4 compiled to WebAssembly. Pick an example, edit it, and it is typeset again in this tab: MetaPost with TeX labels, whole LaTeX and plain TeX documents, graph drawing and Lua under LuaTeX, and OpenType fonts through fontspec. No server.</p>
+  </div>
+  <div class="status-line" id="status"><span class="spinner"></span><span>loading the engine…</span></div>
+</div>
+<main class="workbench">
+  <nav class="gallery" id="gallery" aria-label="Examples"></nav>
+  <section class="editor card" aria-label="Source">
+    <div class="toolbar">
+      <button class="btn primary" id="run" type="button">Run <kbd>⌘⏎</kbd></button>
+      <label class="check"><input type="checkbox" id="live" checked> live</label>
+      <label class="field">mode <select id="mode"><option value="mp">MetaPost</option><option value="latex">LaTeX / TikZ (auto)</option><option value="lualatex">LuaLaTeX</option><option value="luatex">plain LuaTeX</option><option value="plain">plain TeX</option></select></label>
+      <span class="sep"></span>
+      <div class="opts">
+        <label class="field" title="MetaPost: which TeX typesets btex … etex labels">labels <select id="tex"><option value="auto">auto</option><option value="plain">plain</option><option value="latex">latex</option><option value="none">none</option></select></label>
+        <label class="field" title="MetaPost's number system; scaled stops at 4096">numbers <select id="numbers"><option value="scaled">scaled</option><option value="double">double</option><option value="decimal">decimal</option></select></label>
+        <label class="field" title="LaTeX: text as glyph outlines, or embedded woff2 web fonts and real &lt;text&gt;">text <select id="fonts"><option value="paths">outlines</option><option value="woff2">woff2</option></select></label>
+        <label class="check" title="load the opt-in opentype and otf-fonts bundles, for fontspec, luaotfload and unicode-math under LuaTeX"><input type="checkbox" id="opentype"> OpenType</label>
+        <label class="check" title="run the engines in a Web Worker (unticked: on this page's thread)"><input type="checkbox" id="worker" checked> worker</label>
+        <label class="field" title="what each run writes to the browser console">log <select id="loglevel"><option value="silent">silent</option><option value="error">error</option><option value="warn" selected>warn</option><option value="info">info</option><option value="debug">debug</option><option value="trace">trace</option></select></label>
+      </div>
+    </div>
+    <textarea id="source" spellcheck="false" aria-label="Source"></textarea>
+    <div class="about"><div class="tags" id="badges"></div><p id="blurb"></p></div>
+  </section>
+  <section class="output card" aria-label="Output">
+    <div class="tabs" role="tablist">
+      <button class="active" data-pane="preview" type="button">Preview</button>
+      <button data-pane="svg" type="button">SVG</button>
+      <button data-pane="eps" type="button">EPS</button>
+      <button data-pane="json" type="button">JSON</button>
+      <button data-pane="log" type="button">Log</button>
+      <button data-pane="stats" type="button">Stats</button>
+      <button class="btn" id="download" type="button" title="save the figure as an SVG file" disabled>Save SVG</button>
+    </div>
+    <div class="pane paper" id="preview"><span class="placeholder">waiting for the engine…</span></div>
+    <div class="pane" id="svg" hidden><pre></pre></div>
+    <div class="pane" id="eps" hidden><pre></pre></div>
+    <div class="pane" id="json" hidden><pre></pre></div>
+    <div class="pane" id="log" hidden><div id="diagnostics"></div><pre></pre></div>
+    <div class="pane" id="stats" hidden></div>
+  </section>
+</main>
+<footer>
+  <p><b>What you are looking at.</b> In MetaPost mode the interpreter (mplib, 1.2 MB of wasm) runs in a Web Worker. Text in <code>btex … etex</code> is extracted before the run, typeset in one batched pdfTeX job, converted with MetaPost's own <code>dvitomp</code>, cached by content hash and handed back through mplib's <code>make_text</code> callback; glyphs become SVG paths through MetaPost's own backend. In the TeX modes the whole document goes through pdfTeX in DVI mode and then dvisvgm, with PGF's special handlers, so shadings, patterns, clipping, opacity and pgfplots come out as native SVG. A document that uses graph drawing, <code>\directlua</code> or luacode goes to LuaTeX instead (fetched the first time it is needed), and with the OpenType box ticked LuaTeX also has luaotfload, fontspec, unicode-math and the Latin Modern OpenType family, each face fetched when a document first uses it.</p>
+  <p>Output is byte-identical to TeX Live 2025's own <code>mpost</code>, <code>latex</code> and <code>dvisvgm</code> on the golden corpora. <span id="sizes"></span></p>
+</footer>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

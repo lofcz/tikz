@@ -1,0 +1,92 @@
+{
+  "name": "mp-tikz-wasm",
+  "version": "0.5.0",
+  "private": true,
+  "description": "MetaPost (mplib 2.11), pdfTeX, LuaTeX and dvisvgm compiled to WebAssembly: MetaPost to SVG/EPS/JSON, and LaTeX/TikZ documents (graph drawing included) to SVG, in the browser and Node",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmckalex/mp-tikz-wasm.git"
+  },
+  "homepage": "https://github.com/jmckalex/mp-tikz-wasm#readme",
+  "bugs": {
+    "url": "https://github.com/jmckalex/mp-tikz-wasm/issues"
+  },
+  "author": "J. McKenzie Alexander",
+  "keywords": [
+    "metapost",
+    "tikz",
+    "pgf",
+    "latex",
+    "luatex",
+    "dvisvgm",
+    "webassembly",
+    "wasm",
+    "svg",
+    "tikzjax"
+  ],
+  "type": "module",
+  "license": "LGPL-3.0-or-later",
+  "scripts": {
+    "build": "npm run build:mplib && npm run build:tex && npm run build:texutils && npm run build:luatex && npm run build:dvisvgm && npm run build:ghostscript && npm run build:texmf && npm run build:formats && npm run build:ts && npm run build:fontdb && npm run build:bundles && npm run build:hot",
+    "build:mplib": "make wasm",
+    "build:tex": "./scripts/build-tex-wasm.sh",
+    "build:texutils": "./scripts/build-texutils-wasm.sh",
+    "build:texmf": "./scripts/build-texmf.sh",
+    "build:formats": "node scripts/make-formats.mjs",
+    "build:fontdb": "node scripts/make-fontdb.mjs",
+    "build:bundles": "node scripts/build-bundles.mjs",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:contract": "make contract",
+    "test:golden": "node scripts/golden.mjs",
+    "test:golden:check": "node scripts/golden.mjs --check",
+    "test:all": "npm run test && npm run test:contract && npm run test:golden:check && node scripts/golden-tikz.mjs --check && node scripts/golden-pdf.mjs --check && node scripts/smoke-texutils.mjs && npm run check-nosystem",
+    "check-nosystem": "./scripts/check-nosystem.sh dist/*.wasm",
+    "typecheck": "tsc --noEmit",
+    "demo": "node scripts/serve.mjs 8080",
+    "verify-pin": "./scripts/verify-pin.sh",
+    "build:dvisvgm": "./scripts/build-dvisvgm-wasm.sh",
+    "build:luatex": "./scripts/native-luatex.sh && ./scripts/build-luatex-wasm.sh",
+    "build:standalone": "node scripts/build-standalone.mjs",
+    "test:golden:tikz": "node scripts/golden-tikz.mjs",
+    "test:golden:pdf": "node scripts/golden-pdf.mjs",
+    "package": "./scripts/package-release.sh",
+    "build:guide": "node scripts/build-guide.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
+    "pages": "./scripts/publish-pages.sh",
+    "build:hot": "node scripts/make-hotlists.mjs",
+    "build:manual": "node scripts/build-manual-viewer.mjs",
+    "build:ghostscript": "./scripts/build-ghostscript.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5",
+    "vitest": "^2"
+  },
+  "bin": {
+    "mpost-wasm": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./worker": "./dist/worker.js",
+    "./mplib.wasm": "./dist/mplib.wasm",
+    "./tex.wasm": "./dist/tex.wasm",
+    "./package.json": "./package.json",
+    "./dvisvgm.wasm": "./dist/dvisvgm.wasm",
+    "./auto": "./dist/auto.js",
+    "./figures": "./dist/figures.js",
+    "./prerender": "./dist/prerender.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "patches",
+    "src/c"
+  ]
+}
