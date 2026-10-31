@@ -342,6 +342,8 @@ export interface ToolResult {
 
 /** The bundle manifest format (docs/06 §3). Paths are relative to the texmf root. */
 export interface BundleManifest {
+  storage?: "brotli-chunks-v1";
+  filesystemKey?: string;
   name: string;
   version: string;
   texlive?: string;

@@ -36,13 +36,24 @@ export async function copyTikzBrowserAssets(directory) {
   for (const name of pin.bundles) {
     const base = join(destination, 'runtime/dist/bundles', name);
     const index = JSON.parse(await readFile(join(base, 'files.index.json'), 'utf8'));
-    const bytes = brotliDecompressSync(await readFile(join(base, 'files.br')));
-    for (const [path, [offset, size]] of Object.entries(index)) {
+    const chunks = new Map();
+    for (const [path, entry] of Object.entries(index)) {
+      const [chunk, offset, size] = entry.length === 2 ? ['files.br', ...entry] : entry;
+      if (!chunks.has(chunk)) chunks.set(chunk, brotliDecompressSync(await readFile(join(base, chunk))));
+      const bytes = chunks.get(chunk);
       const file = join(base, 'files', path);
       await mkdir(dirname(file), { recursive: true });
       await writeFile(file, bytes.subarray(offset, offset + size));
     }
-    await rm(join(base, 'files.br')); await rm(join(base, 'files.index.json'));
+    const manifest = JSON.parse(await readFile(join(base, 'manifest.json'), 'utf8'));
+    delete manifest.storage;
+    // Browser assets use individual files; avoid an extra index round trip.
+    delete manifest.filesystemKey;
+    await writeFile(join(base, 'manifest.json'), JSON.stringify(manifest));
+    await rm(join(base, 'files.br'), { force: true });
+    await rm(join(base, 'chunks'), { recursive: true, force: true });
+    await rm(join(base, 'files.index.json'));
   }
+  await rm(join(destination, 'runtime/dist/bundles/filesystem.json'), { force: true });
   return { directory: destination, version: JSON.parse(await readFile(join(source, 'package.json'), 'utf8')).version };
 }

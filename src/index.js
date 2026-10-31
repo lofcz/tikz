@@ -74,11 +74,12 @@ export function createTikzRenderer(options = {}) {
         if (failure) { reject(failure); return; }
         if (code !== 0 || terminationSignal) { reject(new Error(stderr || 'TikZ compilation failed')); return; }
         try {
-          const { svg } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          const bytes = Buffer.concat(chunks);
+          const svg = bytes.toString('utf8');
           const dimensions = typeof svg === 'string' && svg.match(/viewBox=['"]([^'"]+)['"]/)?.[1].trim().split(/[ ,]+/).map(Number);
           if (!dimensions || dimensions.length !== 4 || !dimensions.every(Number.isFinite) || dimensions[2] <= 0 || dimensions[3] <= 0)
             throw new Error('TikZ returned an invalid picture size');
-          resolve({ svg, width: dimensions[2], height: dimensions[3], dataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}` });
+          resolve({ svg, width: dimensions[2], height: dimensions[3], dataUrl: `data:image/svg+xml;base64,${bytes.toString('base64')}` });
         } catch (error) { reject(error); }
       });
       child.stdin.end(JSON.stringify({ source }));

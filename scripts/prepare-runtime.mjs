@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { access, cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,26 +65,43 @@ if (!cached) {
 execFileSync(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'),
   '-p', join(root, 'packages/engine/tsconfig.build.json')], { stdio: 'inherit' });
 await cp(join(root, 'packages/engine/dist'), join(target, 'dist'), {
-  recursive: true, filter: source => !source.endsWith('.map'),
+  recursive: true, filter: async source => (await stat(source)).isDirectory() || /\.(js|d\.ts)$/.test(source),
 });
-// Compress each complete bundle, retaining compression shared across font files.
+// Bounded archives avoid inflating a whole font/macro bundle for one file.
 const bundleRoot = join(target, 'dist/bundles');
+const chunkLimit = 512 * 1024;
 for (const name of pin.bundles) {
   const directory = join(bundleRoot, name);
   try { await access(join(directory, 'files')); } catch { continue; }
   const manifest = JSON.parse(await readFile(join(directory, 'manifest.json'), 'utf8'));
-  const index = Object.create(null), chunks = [];
-  let offset = 0;
+  const index = Object.create(null);
+  let chunks = [], offset = 0, chunkNumber = 0;
+  await mkdir(join(directory, 'chunks'), { recursive: true });
+  async function flush() {
+    if (!chunks.length) return;
+    await writeFile(join(directory, `chunks/${chunkNumber}.br`), brotliCompressSync(Buffer.concat(chunks), {
+      params: { [constants.BROTLI_PARAM_QUALITY]: 9 },
+    }));
+    chunks = []; offset = 0; chunkNumber++;
+  }
   for (const [path, expected] of Object.entries(manifest.files)) {
     const bytes = await readFile(join(directory, 'files', path));
     if (bytes.length !== expected.size || createHash('sha256').update(bytes).digest('hex').slice(0, expected.sha.length) !== expected.sha)
       throw new Error(`Bundle manifest mismatch: ${name}/${path}`);
-    index[path] = [offset, bytes.length]; chunks.push(bytes); offset += bytes.length;
+    if (offset && offset + bytes.length > chunkLimit) await flush();
+    index[path] = [`chunks/${chunkNumber}.br`, offset, bytes.length]; chunks.push(bytes); offset += bytes.length;
   }
-  await writeFile(join(directory, 'files.br'), brotliCompressSync(Buffer.concat(chunks), {
-    params: { [constants.BROTLI_PARAM_QUALITY]: 9 },
-  }));
+  await flush();
+  manifest.storage = 'brotli-chunks-v1';
+  manifest.filesystemKey = createHash('sha256').update(JSON.stringify([manifest.files, manifest.dirs])).digest('hex');
+  await writeFile(join(directory, 'manifest.json'), JSON.stringify(manifest));
   await writeFile(join(directory, 'files.index.json'), JSON.stringify(index));
   await rm(join(directory, 'files'), { recursive: true });
 }
-console.log('Compiled fork engine; compact server bundles ready');
+// Indexes are immutable package data, so construct them once at build time.
+const { BundleSet } = await import(new URL('../runtime/dist/vfs/bundle.js', import.meta.url));
+const { nodeIO } = await import(new URL('../runtime/dist/node.js', import.meta.url));
+const bundles = new BundleSet(await nodeIO());
+await bundles.addAll(pin.bundles.map(name => ({ name, manifestUrl: new URL(`../runtime/dist/bundles/${name}/`, import.meta.url).href })));
+await writeFile(join(bundleRoot, 'filesystem.json'), JSON.stringify(bundles.exportFilesystemIndex()));
+console.log('Compiled fork engine; indexed chunked bundles ready');

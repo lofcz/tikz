@@ -54,6 +54,7 @@ class InProcessBackend implements Backend {
       this.bundles.logger = this.logger;
       const base = o.bundleBaseUrl ?? new URL('./bundles/', here).href;
       await this.bundles.addAll(resolveBundleSpecs(o.bundles ?? DEFAULT_BUNDLES, base));
+      await this.bundles.loadFilesystemIndex((base.endsWith('/') ? base : base + '/') + 'filesystem.json');
       if (!o.lazy || !this.bundles.canFetchSync) await this.bundles.prefetchEager();
       if (!o.lazy) await this.bundles.loadHot((base.endsWith('/') ? base : base + '/') + 'hot.json');
       if (!this.bundles.canFetchSync) await this.bundles.prefetchAll();

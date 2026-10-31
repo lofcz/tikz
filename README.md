@@ -112,8 +112,11 @@ a checksum-pinned release in our fork; their original build provenance is record
 in `upstream.json`. Set `TIKZ_ARCHIVE=/path/to/archive.tar.gz` for offline builds.
 The native binaries are the upstream baseline, not a new native compilation.
 
-The server distribution Brotli-compresses complete bundles and lazily decompresses each bundle
-on its first file request. It retains all ten default bundles, including pgfplots and LuaTeX.
+The server distribution uses Brotli chunks targeting 512 KiB uncompressed (larger
+individual files stay intact). Each render decompresses only the chunks it reads;
+manifest metadata avoids speculative raw-file reads. Directory and `ls-R` indexes
+are prepared at build time for the default bundle set. Custom bundle sets rebuild
+their indexes, and browser assets use individual files without an extra index fetch. It retains all ten default bundles, including pgfplots and LuaTeX.
 The engine source still supports ordinary uncompressed assets and browser I/O.
 
 

@@ -60,6 +60,8 @@ export class BundleSet {
     this.addLoaded(spec, base, manifest);
   }
   private addLoaded(spec: BundleSpec, base: string, manifest: BundleManifest): void {
+    this.indexCache = undefined;
+    this.lsRText = undefined;
     this.manifests.push({ spec, manifest, base });
     const blobBase = spec.blobBaseUrl ?? joinUrl(base, 'files');
     for (const [path, info] of Object.entries(manifest.files)) {
@@ -84,6 +86,23 @@ export class BundleSet {
       return { spec, base, manifest: (await this.io.fetchJson(joinUrl(base, 'manifest.json'))) as BundleManifest };
     }));
     for (const m of manifests) this.addLoaded(m.spec, m.base, m.manifest);
+  }
+
+  /** Build-time immutable indexes; dynamic/custom bundle sets use the normal builder. */
+  exportFilesystemIndex() {
+    return { keys: this.manifests.map(m => m.manifest.filesystemKey),
+      dirs: [...this.index().dirs].map(([path, children]) => [path, [...children]]), lsR: this.lsR() };
+  }
+
+  async loadFilesystemIndex(url: string): Promise<void> {
+    if (!this.manifests.every(m => m.manifest.filesystemKey)) return;
+    try {
+      const data = await this.io.fetchJson(url) as { keys: string[]; dirs: [string, string[]][]; lsR: string };
+      const keys = this.manifests.map(m => m.manifest.filesystemKey);
+      if (JSON.stringify(data.keys) !== JSON.stringify(keys) || !Array.isArray(data.dirs) || typeof data.lsR !== 'string') return;
+      this.indexCache = { dirs: new Map(data.dirs.map(([path, children]) => [path, new Set(children)])) };
+      this.lsRText = data.lsR;
+    } catch { /* Optional prebuilt index; reconstruct for custom/missing assets. */ }
   }
 
   /** Load the hot lists; optional, so a missing file is not an error. */
