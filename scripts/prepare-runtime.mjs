@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { access, cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { x } from 'tar';
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -39,10 +39,10 @@ try {
     await cp(join(upstream, 'dist'), join(staged, 'dist'), {
       recursive: true,
       filter: (source) => {
-        const relative = source.slice(join(upstream, 'dist').length + 1).split('/');
-        return relative[0] !== 'ghostscript' &&
-          !(relative[0] === 'bundles' && relative.length > 1 &&
-            !pin.bundles.includes(relative[1]) && !['hot.json', 'index.json'].includes(relative[1]));
+        const parts = relative(join(upstream, 'dist'), source).split(sep);
+        return parts[0] !== 'ghostscript' &&
+          !(parts[0] === 'bundles' && parts.length > 1 &&
+            !pin.bundles.includes(parts[1]) && !['hot.json', 'index.json'].includes(parts[1]));
       },
     });
     for (const name of ['LICENSE', 'NOTICE.md', 'licenses'])
