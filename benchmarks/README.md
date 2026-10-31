@@ -59,3 +59,11 @@ reduction. Native timing samples were collected under shared-host load and do no
 justify changing production defaults. The release retains pinned native binaries;
 local native build outputs cannot silently replace them during package assembly.
 Use the build controls for further controlled comparisons, not as runtime options.
+
+A separate C23 `-O2` comparison reduced only TeX's initial memory, 128 → 64 MiB.
+It preserved SVG hashes and reduced measured RSS in the local samples, but simple
+and plot medians worsened (645 → 777 ms and 894 → 1,156 ms). The combined
+`-O3`/LTO TeX 64 MiB + dvisvgm 32 MiB build also preserved all four fixtures,
+but raised RSS by roughly 7–13 MiB in three fixtures. These shared-host results
+support leaving the defaults unchanged, not a claim that smaller heaps can never
+help. Both C23 candidates passed the MD5/regex/color-stack primitive checks.
