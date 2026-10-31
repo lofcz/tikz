@@ -7,14 +7,20 @@ on:
       - 'packages/engine/patches/pdftex/**'
       - 'packages/engine/scripts/native-*.sh'
       - 'packages/engine/scripts/prepare-pdftex-source.sh'
-      - 'packages/engine/scripts/test-pdftex-c23.sh'
+      - 'packages/engine/scripts/test-pdftex-c23.*'
+      - 'packages/engine/scripts/build-tex-wasm.sh'
+      - 'packages/engine/patches/kpathsea/**'
+      - 'packages/engine/test/c23-primitives.tex'
       - '.github/workflows/native-c23.yml'
   pull_request:
     paths:
       - 'packages/engine/patches/pdftex/**'
       - 'packages/engine/scripts/native-*.sh'
       - 'packages/engine/scripts/prepare-pdftex-source.sh'
-      - 'packages/engine/scripts/test-pdftex-c23.sh'
+      - 'packages/engine/scripts/test-pdftex-c23.*'
+      - 'packages/engine/scripts/build-tex-wasm.sh'
+      - 'packages/engine/patches/kpathsea/**'
+      - 'packages/engine/test/c23-primitives.tex'
       - '.github/workflows/native-c23.yml'
 permissions:
   contents: read
@@ -22,7 +28,7 @@ jobs:
   pdftex:
     runs-on: ubuntu-latest
     container: gcc:16.2.0
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: packages/engine
@@ -48,4 +54,18 @@ jobs:
       - name: Verify repeatable patching and unchanged upstream source
         run: |
           bash scripts/prepare-pdftex-source.sh
+          sha256sum -c /tmp/pdftex-source.sha
+      - name: Install pinned Emscripten
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git /tmp/emsdk
+          /tmp/emsdk/emsdk install "$(cat .emsdk-version)"
+          /tmp/emsdk/emsdk activate "$(cat .emsdk-version)"
+      - name: Build and exercise WASM pdfTeX with C23
+        shell: bash
+        env:
+          TEX_OPT: '-O2 -std=gnu23'
+        run: |
+          source /tmp/emsdk/emsdk_env.sh
+          bash scripts/build-tex-wasm.sh
+          node scripts/test-pdftex-c23.mjs
           sha256sum -c /tmp/pdftex-source.sha

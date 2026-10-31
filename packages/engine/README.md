@@ -7,7 +7,9 @@
 > Upstream documentation and native build instructions follow.
 > The native pdfTeX build patches the WEB source in its build directory to avoid
 > the C23 `bool` keyword. It keeps the pinned upstream source unchanged and is
-> verified with GCC 16 in C23 mode, including the affected conversion primitives.
+> verified with GCC 16 and Emscripten 6.0.9 in C23 mode, including the affected
+> conversion primitives. Build-local kpathsea patches also replace obsolete function
+> declarations and avoid host-only filesystem configuration in WASM.
 
 # mp-tikz-wasm
 

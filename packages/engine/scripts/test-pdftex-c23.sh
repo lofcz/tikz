@@ -10,17 +10,7 @@ cat > "$TEMP/texmf.cnf" <<'CONFIG'
 TEXINPUTS = .
 max_print_line = 1000
 CONFIG
-cat > "$TEMP/probe.tex" <<'TEX'
-\catcode123=1 \catcode125=2
-\pdfoutput=1
-\message{C23-MD5-TEXT:\pdfmdfivesum{abc}}
-\message{C23-MD5-FILE:\pdfmdfivesum file {input.txt}}
-\message{C23-MATCH-SENSITIVE:\pdfmatch{abc}{ABC}}
-\message{C23-MATCH-INSENSITIVE:\pdfmatch icase {abc}{ABC}}
-\ifnum\pdfcolorstackinit page direct{0 g}>0 \message{C23-PAGE-STACK:OK}\else\errmessage{Page stack failed}\fi
-\ifnum\pdfcolorstackinit direct{0 g}>0 \message{C23-STACK:OK}\else\errmessage{Stack failed}\fi
-\end
-TEX
+cp "$REPO/test/c23-primitives.tex" "$TEMP/probe.tex"
 if ! (cd "$TEMP" && TEXMFCNF="$TEMP" "$PDFTEX" -ini -interaction=nonstopmode -halt-on-error probe.tex > output.log); then
   cat "$TEMP/output.log"
   exit 1

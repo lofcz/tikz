@@ -1,0 +1,22 @@
+--- a/getopt.h
++++ b/getopt.h
+@@ -130,7 +130,7 @@
+ #define __GETOPT_H__ /* Avoid that <unistd.h> redeclares the getopt API.  */
+ #endif
+ #elif !defined (__cplusplus)
+-extern KPSEDLL int getopt ();
++extern KPSEDLL int getopt (int argc, char *const *argv, const char *shortopts);
+ #endif
+ 
+ #ifndef __need_getopt
+--- a/getopt.c
++++ b/getopt.c
+@@ -208,7 +208,7 @@
+ /* Avoid depending on library functions or files
+    whose names are inconsistent.  */
+ 
+-char *getenv ();
++char *getenv (const char *name);
+ 
+ static char *my_index(const char *str, int chr)
+ {
