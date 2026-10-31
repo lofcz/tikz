@@ -1,6 +1,6 @@
 {
   "name": "@lofcz/tikz",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Self-contained, process-isolated TikZ to SVG rendering powered by mp-tikz-wasm.",
   "type": "module",
   "license": "GPL-3.0-or-later",
