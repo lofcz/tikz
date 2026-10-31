@@ -13,7 +13,11 @@
       "types": "./src/deploy.d.ts",
       "default": "./src/deploy.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./browser": {
+      "types": "./src/browser.d.ts",
+      "default": "./src/browser.js"
+    }
   },
   "files": [
     "src",
@@ -41,10 +45,14 @@
     "test": "node --test test/*.test.mjs",
     "test:package": "node scripts/test-package.mjs",
     "check": "npm run build && npm test && npm run test:package",
-    "bootstrap": "node scripts/bootstrap-publish.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "build:engine": "tsc -p packages/engine/tsconfig.build.json",
+    "test:browser": "node test/browser.mjs"
   },
   "devDependencies": {
-    "tar": "^7.5.22"
+    "@types/node": "^22.20.5",
+    "playwright": "^1.64.1",
+    "tar": "^7.5.22",
+    "typescript": "^5.9.3"
   }
 }

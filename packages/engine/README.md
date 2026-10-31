@@ -1,3 +1,10 @@
+> Maintained fork: canonical source is `packages/engine` in
+> [lofcz/tikz](https://github.com/lofcz/tikz). This subtree is mirrored to
+> [lofcz/mp-tikz-wasm](https://github.com/lofcz/mp-tikz-wasm/tree/tikz-monorepo).
+> Fork additions: portable Node file URLs and indexed Brotli bundle archives.
+> Browser deployments continue to use the original uncompressed bundle layout.
+> Upstream documentation and native build instructions follow.
+
 # mp-tikz-wasm
 
 [![ci](https://github.com/jmckalex/mp-tikz-wasm/actions/workflows/ci.yml/badge.svg)](https://github.com/jmckalex/mp-tikz-wasm/actions/workflows/ci.yml)

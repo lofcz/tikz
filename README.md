@@ -1,7 +1,7 @@
 # @lofcz/tikz
 
 Render standard TikZ and standalone LaTeX to SVG using
-[jmckalex/mp-tikz-wasm](https://github.com/jmckalex/mp-tikz-wasm). Node 22.19+ and
+our maintained [mp-tikz-wasm fork](https://github.com/lofcz/mp-tikz-wasm). Node 22.19+ and
 Bun with Node on PATH. No system TeX installation, network access, runtime
 download, install script, framework, or API key is needed by consumers.
 
@@ -45,8 +45,35 @@ Each request runs in a fresh child process with an empty environment and WASM
 virtual filesystem. Timeouts/aborts kill that process, including synchronous TeX
 loops; queue capacity is not released until the process closes. The Node heap
 limit is 512 MB, not a total RSS/WASM memory limit. Apply container/OS resource
-limits when serving untrusted workloads. This is a server package; browser apps
-should call their own rendering endpoint.
+limits when serving untrusted workloads. Browser apps use the worker entry below; backend generation uses the Node entry.
+
+## Browser rendering
+
+Compile locally in a dedicated Web Worker:
+
+```js
+import { createTikzRenderer } from '@lofcz/tikz/browser';
+const renderer = createTikzRenderer({ assetBaseUrl: '/tikz/' });
+const image = await renderer.render(source, { signal });
+// On teardown: renderer.dispose();
+```
+
+Copy static assets during your app build and serve them from that same-origin URL:
+
+```js
+import { copyTikzBrowserAssets } from '@lofcz/tikz/deploy';
+await copyTikzBrowserAssets('public/tikz');
+```
+
+The helper expands compressed TeX bundles for ordinary static hosting. WASM and
+TeX files load lazily on the first figure, with normal HTTP caching; there is no
+rendering endpoint or CDN dependency. The worker is reused for successive figures
+and terminated on cancellation, failure, or the 30-second compilation deadline.
+Initial runtime loading has a separate 60-second deadline. Eight jobs may queue.
+Call `dispose()` when the host is destroyed. Use versioned asset URLs on deployment.
+
+With Streamdown, pass `render: source => renderer.render(source)` to
+`createTikzPlugin`. The plugin displays the returned `dataUrl` as an isolated image.
 
 ## Bundlers and deployment
 
@@ -64,46 +91,38 @@ output location, rather than resolving WASM relative to a relocated chunk. Call
 the helper for each function that includes the renderer. File tracers must retain
 the full package including `runtime/`; copying only JavaScript is insufficient.
 
-## Development and first publication
+## Development
 
 ```sh
 npm ci
 npm run check
-npm run bootstrap -- --dry-run
 ```
 
-Build downloads the checksum-pinned upstream archive once and selects the default
-bundles. Set `TIKZ_ARCHIVE=/path/to/upstream.tar.gz` to build offline; the same
-checksum is always enforced. The npm tarball includes all selected runtime assets
-and their notices. Tests render real TikZ/pgfplots, exercise cancellation/limits,
-and install the packed tarball offline before rendering from a relocated
-function directory with the original installation removed.
+The engine source lives in `packages/engine`, imported from upstream v0.5.0 as a
+Git subtree. Every build compiles this source. Native WASM and TeX data come from
+a checksum-pinned release in our fork; their original build provenance is recorded
+in `upstream.json`. Set `TIKZ_ARCHIVE=/path/to/archive.tar.gz` for offline builds.
+The native binaries are the upstream baseline, not a new native compilation.
 
-For the **first manual release**, use Node 22.19+ and npm 11.19+ in an interactive
-terminal:
+The server distribution Brotli-compresses complete bundles and lazily decompresses each bundle
+on its first file request. It retains all ten default bundles, including pgfplots and LuaTeX.
+The engine source still supports ordinary uncompressed assets and browser I/O.
+
+
+Tests render real TikZ/pgfplots, exercise cancellation and limits, and install the
+packed tarball offline before rendering from a relocated function directory.
+
+For engine development and native rebuilds, see [packages/engine](packages/engine).
+Mirror engine changes to the fork with:
 
 ```sh
-npm login
-npm run bootstrap
+git subtree push --prefix=packages/engine https://github.com/lofcz/mp-tikz-wasm.git tikz-monorepo
 ```
 
-The bootstrap validates and publishes the real `0.1.0` package, then runs:
-
-```sh
-npm trust github @lofcz/tikz --file release.yml --repo lofcz/tikz --allow-publish --yes
-```
-
-Complete npm's interactive 2FA prompts. No npm token is stored in this repository
-or GitHub secrets. If publishing succeeds but trust setup is interrupted, rerun
-the bootstrap: an already-published version is skipped and trust setup resumes.
-
-Subsequent releases follow the Edix workflow: manually select patch/minor/major,
-validate, bump and tag, publish with OIDC/provenance, then push and create a release:
+Release through GitHub Actions with npm trusted publishing:
 
 ```sh
 gh workflow run release.yml -R lofcz/tikz -f release_type=patch
 ```
 
-The workflow cannot bootstrap an npm package name that has no trusted publisher;
-run the manual step once first. Runtime licensing and rebuild/source links are
-in [NOTICE.md](NOTICE.md).
+Licensing and native source links are in [NOTICE.md](NOTICE.md).

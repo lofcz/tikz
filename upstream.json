@@ -1,9 +1,9 @@
 {
-  "repository": "https://github.com/jmckalex/mp-tikz-wasm",
+  "repository": "https://github.com/lofcz/mp-tikz-wasm",
   "version": "0.5.0",
   "commit": "d44aeeba98b0e60d13c35dfd080076e6b05c68b5",
-  "archive": "https://github.com/jmckalex/mp-tikz-wasm/releases/download/v0.5.0/mp-tikz-wasm-0.5.0.tar.gz",
-  "sha256": "76b5591a83adfb96e8087b8560fd993c6ebba475ad15a63269a8aa47517dd575",
+  "archive": "https://github.com/lofcz/mp-tikz-wasm/releases/download/native-v0.5.0-r1/tikz-native-0.5.0.tar.gz",
+  "sha256": "fa5b8752f7e59e83ad9ffa934022ced278b3f19c7c4d0205b5c3cb028ffc5560",
   "bundles": [
     "core",
     "cm-tfm",
@@ -15,5 +15,13 @@
     "latex-extra",
     "tikz-snapshot",
     "luatex"
-  ]
+  ],
+  "upstream": {
+    "repository": "https://github.com/jmckalex/mp-tikz-wasm",
+    "version": "0.5.0",
+    "commit": "d44aeeba98b0e60d13c35dfd080076e6b05c68b5",
+    "archive": "https://github.com/jmckalex/mp-tikz-wasm/releases/download/v0.5.0/mp-tikz-wasm-0.5.0.tar.gz",
+    "sha256": "76b5591a83adfb96e8087b8560fd993c6ebba475ad15a63269a8aa47517dd575"
+  },
+  "distribution": "brotli-bundle-archives-v1"
 }

@@ -1,8 +1,10 @@
 # Third-party runtime
 
-This wrapper uses unmodified mp-tikz-wasm 0.5.0 by jmckalex, pinned to commit
+This wrapper maintains a fork of mp-tikz-wasm 0.5.0 by jmckalex, based on commit
 d44aeeba98b0e60d13c35dfd080076e6b05c68b5. `upstream.json` records the archive and
-SHA-256. Only package maintainers download it, during `npm run build`.
+SHA-256. Only package maintainers download the native baseline from our fork during `npm run build`.
+Engine TypeScript is compiled from `packages/engine` in https://github.com/lofcz/tikz;
+the fork is mirrored at https://github.com/lofcz/mp-tikz-wasm/tree/tikz-monorepo.
 
 The wrapper is GPL-3.0-or-later. Runtime components and fonts retain their
 respective licenses; see the complete upstream `runtime/NOTICE.md`,
@@ -12,7 +14,9 @@ TeX macros and fonts. This is not an MIT-only distribution.
 
 Only the ten upstream default bundles are shipped. Optional Classico (AFPL),
 Ghostscript, latex-doc, OpenType and otf-fonts bundles are excluded. No Ghostscript
-engine is included. No engine or macro files are modified.
+engine is included. Native binaries and macro contents are unchanged. Bundle payloads are Brotli-compressed
+without changing their contents. Our Node I/O decompresses them on demand and
+uses portable file URL handling. Browser I/O still uses uncompressed assets.
 
 Corresponding upstream source, patches and reproducible build instructions:
 https://github.com/jmckalex/mp-tikz-wasm/tree/d44aeeba98b0e60d13c35dfd080076e6b05c68b5

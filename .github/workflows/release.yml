@@ -32,6 +32,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Build and verify the real package
         run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
       - name: Bump version
         id: version
         env:
