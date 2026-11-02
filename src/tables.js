@@ -90,7 +90,7 @@ export const AUTO_PACKAGES = [
 ];
 export const AUTO_LIBRARIES = [
   [/\bmatrix of (?:math )?nodes\b|\\matrix\b/, 'matrix'],
-  [/\b(?:regular polygon|trapezium|semicircle|isosceles triangle|kite|dart|circular sector|cylinder|diamond|star|ellipse)\s*[,\]=]/, 'shapes.geometric'],
+  [/\b(?:regular polygon|trapezium|parallelogram|semicircle|isosceles triangle|kite|dart|circular sector|cylinder|diamond|star|ellipse)\s*[,\]=]/, 'shapes.geometric'],
   [/\b(?:cross out|strike out|rounded rectangle|chamfered rectangle)\b/, 'shapes.misc'],
   [/\b(?:cloud|forbidden sign|magnifying glass|starburst|signal|tape|magnetic tape|correct forbidden sign)\s*[,\]=]/, 'shapes.symbols'],
   [/\b(?:rectangle split|circle split|ellipse split)\b/, 'shapes.multipart'],

@@ -17,6 +17,7 @@ import { printRaw } from '@unified-latex/unified-latex-util-print-raw';
 import { parsePgfkeys } from '@unified-latex/unified-latex-util-pgfkeys';
 import { BUNDLED_PACKAGES, BUNDLED_PGFPLOTS_LIBRARIES, BUNDLED_TIKZ_LIBRARIES } from './bundled.js';
 import * as T from './tables.js';
+import { recoverGeneratedSyntax } from './recover.js';
 
 export const DEFAULT_LIBRARIES = ['calc', 'intersections', 'angles', 'quotes', 'arrows.meta', 'positioning'];
 
@@ -492,11 +493,33 @@ function processKeyList(nodes, context) {
   for (const item of items) {
     const parts = item.itemParts ?? [];
     if (!parts.length) continue;
-    const key = printRaw(parts[0]).trim();
+    let key = printRaw(parts[0]).trim();
     const value = parts[1];
+    // In TikZ, a named collection of keys needs /.style. PGFPlots has real
+    // setters named "tick style" etc., so leave its options alone.
+    if (context.tikz && !key.includes('/') && key.endsWith(' style') && value?.some(isGroup)) {
+      key += '/.style';
+      parts[0] = [str(key)];
+    }
     if (value && TEXT_KEYS.has(key)) repairTextNodes(value, context);
     if (value && /^(?:xtick|ytick|ztick)labels$|^legend entries$/.test(key)) for (const node of value) if (isGroup(node)) repairTextNodes(node.content, context);
     const styleName = /^(.+?)\/\.(?:style|append style)$/.exec(key)?.[1];
+    // A user style called name/label must not replace TikZ's node naming or
+    // labeling machinery. Keep explicit property assignments on the native key.
+    if (styleName && ['name', 'label'].includes(styleName)) {
+      const alias = `tikz recovered ${styleName} style`;
+      context.styleAliases?.set(styleName, alias);
+      parts[0] = [str(key.replace(styleName, alias))];
+    } else if (!value && context.styleAliases?.has(key)) parts[0] = [str(context.styleAliases.get(key))];
+    if (value && /^(above|below|left|right)( left| right)?$/.test(key)) {
+      const target = value.findIndex(node => isString(node, 'of'));
+      const point = target >= 0 ? skipSpace(value, target + 1) : -1;
+      if (point >= 0 && value[point]?.type === 'inlinemath') {
+        // positioning adds the outer parentheses itself; only protect commas
+        // from the PGF key parser, which does not recognize math delimiters.
+        parts[1] = [{ type: 'group', content: value }];
+      }
+    }
     if (styleName && value) for (const node of value) if (isGroup(node)) unloopStyle(node.content, styleName);
     if (key === 'font' && value) {
       const color = pullColors(value);
@@ -535,6 +558,16 @@ function mergeParenthesisedValues(items) {
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const parts = item.itemParts ?? [];
+    if (parts.length === 2 && /^(above|below|left|right)( left| right)?$/.test(printRaw(parts[0]).trim())) {
+      const of = parts[1].findIndex(node => isString(node, 'of'));
+      const number = tokens => /^-?\d+(?:\.\d+)?(?:cm|mm|pt)?$/.test(printRaw(tokens).trim());
+      const next = items[i + 1]?.itemParts;
+      if (of >= 0 && number(parts[1].slice(of + 1)) && next?.length === 1 && number(next[0])) {
+        out.push({ ...item, itemParts: [parts[0], [{ type: 'group', content: [...parts[1], str(','), ...next[0]] }]] });
+        i++;
+        continue;
+      }
+    }
     if (parts.length !== 2 || balance(parts[1]) <= 0) { out.push(item); continue; }
     const value = [...parts[1]];
     let depth = balance(value);
@@ -620,7 +653,7 @@ function processKeyLists(root, context) {
         continue;
       }
       if (node?.type === 'environment' && Array.isArray(node.args)) {
-        for (const argument of node.args) if (argument.openMark === '[') processKeyList(argument.content, context);
+        for (const argument of node.args) if (argument.openMark === '[') processKeyList(argument.content, { ...context, tikz: ['tikzpicture', 'scope', 'circuitikz'].includes(node.env) });
       }
       if (isMacro(node) && KEY_LIST_MACROS.has(node.content) && hasArgs(node)) {
         for (const argument of node.args) if (argument.openMark === '{') processKeyList(argument.content, context);
@@ -882,6 +915,20 @@ function repairForeachLists(root) {
     }
   });
 }
+
+// \boldmath expands unsafely while TikZ parses quoted labels. Move its effect
+// into the actual math expression, keeping group scope and the displayed value.
+function repairBoldMath(root) {
+  walkArrays(root, array => {
+    if (!array.some(node => node.type === 'inlinemath')) return;
+    let bold = false;
+    for (let i = 0; i < array.length; i++) {
+      if (isMacro(array[i], 'boldmath')) { bold = true; array.splice(i--, 1); continue; }
+      if (isMacro(array[i], 'unboldmath')) { bold = false; array.splice(i--, 1); continue; }
+      if (bold && array[i].type === 'inlinemath') array[i].content = [macro('boldsymbol', [{ type: 'argument', openMark: '{', closeMark: '}', content: array[i].content }])];
+    }
+  });
+}
 function mathOnly(nodes) {
   if (nodes.some(node => node.type === 'inlinemath' || node.type === 'displaymath')) return false;
   return needsMath(nodes.filter(node => !isSpace(node)));
@@ -925,7 +972,7 @@ function formatNumbers(root) {
  * @returns {{ source: string, unavailable: string[], notes: string[] }}
  */
 export function prepareTikzDocument(code) {
-  const cleaned = cleanInput(code);
+  const cleaned = recoverGeneratedSyntax(cleanInput(code));
   if (!cleaned) throw new TikzSourceError('TikZ source is empty.');
   const state = {
     packages: new Map(), libraries: new Set(DEFAULT_LIBRARIES), pgfplotsLibraries: new Set(), gdLibraries: new Set(),
@@ -944,15 +991,17 @@ export function prepareTikzDocument(code) {
   const unicodeSeen = new Set();
   const colorsDefined = new Set();
   const colorsSeen = new Set();
-  for (const root of [body, statementsRoot]) {
+  const keyContext = { styleAliases: new Map() };
+  for (const root of [statementsRoot, body]) {
     rewriteHexColors(root);
     replaceUnavailableMacros(root, state);
-    processKeyLists(root, {});
+    processKeyLists(root, keyContext);
   }
   stripOverlayKeys(body);
   protectAndDelimiter(body);
   repairForeachLists(body);
   replaceTypos(body);
+  repairBoldMath(body);
   repairNodeTexts(body);
   // siunitx parses quantities itself; preserve its input grammar.
   unicodeSupport(body, unicodeSeen, unicode);
@@ -988,6 +1037,12 @@ export function prepareTikzDocument(code) {
   if (state.gdLibraries.size) lines.push(`\\usegdlibrary{${[...state.gdLibraries].join(',')}}`);
   if (state.packages.has('pgfplots') && !state.compat) lines.push('\\pgfplotsset{compat=1.18}');
   lines.push(...unicode, ...colors, T.COMPAT_SHIM);
+  if (!excluded.has('pgfmathdistance') && /\\pgfmathdistance\b/.test(everything)) lines.push(String.raw`\makeatletter
+\providecommand{\pgfmathdistance}[2]{\pgfpointdiff{#1}{#2}\pgfmathveclen{\the\pgf@x}{\the\pgf@y}}
+\makeatother`);
+  if (/\bparallelogram\b/.test(everything)) lines.push(String.raw`\pgfkeysifdefined{/tikz/parallelogram/.@cmd}{}{\tikzset{parallelogram/.style={shape=trapezium,trapezium left angle=70,trapezium right angle=110}}}`);
+  lines.push(String.raw`\pgfkeysifdefined{/tikz/rounded cap/.@cmd}{}{\tikzset{rounded cap/.style={line cap=round}}}
+\pgfkeysifdefined{/tikz/final/.@cmd}{}{\tikzset{final/.style={accepting}}}`);
   if (state.shims.has('siunitx')) lines.push(T.siunitxShim());
   if (state.shims.has('physics')) lines.push(T.PHYSICS_SHIM);
   if (state.shims.has('upgreek')) lines.push(...T.GREEK_NAMES.map(name => `\\providecommand{\\up${name}}{\\ensuremath{\\${name}}}`));

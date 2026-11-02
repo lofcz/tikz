@@ -68,6 +68,11 @@ preserves coordinate names, repairs bare math in labels, maps supported Unicode 
 colour names, and moves font colour switches into TikZ's `text=` key. Compiler
 failures identify the offending command/key and show source context. Unknown
 packages cannot be fetched at runtime; normalization reports them in diagnostics.
+Generated-source repairs also handle explicitly declared variable names containing
+digits/underscores, nested arrow options, coordinate expression/unit grouping,
+omitted style handlers, quoted bold math, arithmetic number labels, and tkz
+construction shorthand. Regression tests compare repaired SVGs with independently
+written canonical TikZ. Repairs do not invent missing points or intersections.
 This is a compatibility layer, not a general TeX interpreter or a check that the
 geometry is correct. Missing fonts, arbitrary macros and malformed geometry can
 still require source changes.
