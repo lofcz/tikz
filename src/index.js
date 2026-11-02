@@ -89,13 +89,10 @@ export function createTikzRenderer(options = {}) {
     async render(code, { signal } = {}) {
       if (typeof code !== 'string' || !code.trim() || code.length > settings.maxSourceLength)
         throw new Error(`TikZ: use 1–${settings.maxSourceLength.toLocaleString('en-US')} characters.`);
-      const source = /^\s*\\documentclass\b/m.test(code) ? code : String.raw`\documentclass[tikz,border=6pt]{standalone}
-\usetikzlibrary{calc,intersections,angles,quotes,arrows.meta,positioning}
-\begin{document}
-${code}
-\end{document}`;
+      // The worker normalizes and wraps the picture (src/source.js), so this
+      // entry stays relocatable: it only needs the package directory.
       await acquire(signal);
-      try { return await compile(source, signal); }
+      try { return await compile(code, signal); }
       finally { release(); }
     },
   };

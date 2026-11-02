@@ -28,7 +28,7 @@ export async function copyTikzBrowserAssets(directory) {
     throw new Error('TikZ browser assets must be outside the installed package');
   await mkdir(join(destination, 'src'), { recursive: true });
   await cp(join(source, 'runtime'), join(destination, 'runtime'), { recursive: true });
-  for (const name of ['browser.js', 'browser-worker.js'])
+  for (const name of ['browser.js', 'browser-worker.js', 'source.js'])
     await cp(join(source, 'src', name), join(destination, 'src', name));
   for (const name of ['LICENSE', 'NOTICE.md', 'upstream.json'])
     await cp(join(source, name), join(destination, name));

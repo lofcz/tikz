@@ -56,6 +56,15 @@ loops; queue capacity is not released until the process closes. The Node heap
 limit is 512 MB, not a total RSS/WASM memory limit. Apply container/OS resource
 limits when serving untrusted workloads. Browser apps use the worker entry below; backend generation uses the Node entry.
 
+## Source normalization
+
+Bare pictures are wrapped in a `standalone` document with the common TikZ
+libraries. A `\color{…}` switch inside a `font=` key (`font=\small\color{red!70!black}`)
+is moved to the node's `text=` key before compilation: in this DVI→SVG pipeline
+the colour special opened by the font switch is never popped inside the
+picture and dvisvgm rejects the page (`missing closing tag(s): </g>`). The
+rewrite keeps the same colour and leaves every other source untouched.
+
 ## Browser rendering
 
 Compile locally in a dedicated Web Worker:

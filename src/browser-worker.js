@@ -1,15 +1,11 @@
 import { MetaPost } from '../runtime/dist/index.js';
+import { prepareTikzSource } from './source.js';
 
 try {
   const engine = await MetaPost.create({ worker: false, lazy: true, snapshot: 'auto', logLevel: 'silent' });
   self.onmessage = async ({ data: { source: code, maxOutputBytes } }) => {
     try {
-      const source = /^\s*\\documentclass\b/m.test(code) ? code : String.raw`\documentclass[tikz,border=6pt]{standalone}
-\usetikzlibrary{calc,intersections,angles,quotes,arrows.meta,positioning}
-\begin{document}
-${code}
-\end{document}`;
-      const result = await engine.latex(source, { engine: 'auto', fonts: 'paths' });
+      const result = await engine.latex(prepareTikzSource(code), { engine: 'auto', fonts: 'paths' });
       if (result.status === 'error' || result.status === 'fatal' || result.pages?.length !== 1)
         throw new Error('TikZ requires one valid page. ' + JSON.stringify(result.diagnostics).slice(0, 2000));
       const svg = result.pages[0], bytes = new TextEncoder().encode(svg);
