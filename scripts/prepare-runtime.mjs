@@ -6,12 +6,14 @@ import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { x } from 'tar';
+import { prepareExtraPackages } from './prepare-extra-packages.mjs';
 import { buildBasicFormat } from './build-basic-format.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const pin = JSON.parse(await readFile(join(root, 'upstream.json'), 'utf8'));
 const target = join(root, 'runtime');
+const bundleNames = [...pin.bundles, 'tikz-extra'];
 const buildKey = createHash('sha256');
-for (const path of ['scripts/prepare-runtime.mjs', 'scripts/build-basic-format.mjs', 'scripts/data/bundle-usage.json', 'packages/engine/bundles/tex/tikz-basic-snapshot.tex'])
+for (const path of ['scripts/prepare-runtime.mjs', 'scripts/prepare-extra-packages.mjs', 'scripts/data/extra-packages.json', 'scripts/build-basic-format.mjs', 'scripts/data/bundle-usage.json', 'packages/engine/bundles/tex/tikz-basic-snapshot.tex'])
   buildKey.update(await readFile(join(root, path)));
 const recipeKey = buildKey.digest('hex');
 let cached = false;
@@ -78,11 +80,13 @@ await cp(join(root, 'packages/engine/dist'), join(target, 'dist'), {
   recursive: true, filter: async source => (await stat(source)).isDirectory() || /\.(js|d\.ts)$/.test(source),
 });
 if (!cached) await buildBasicFormat(target, pin.bundles);
+await prepareExtraPackages(root, target);
+await cp(join(root, 'scripts/data/extra-packages.json'), join(target, 'extra-packages.json'));
 const usage = JSON.parse(await readFile(join(root, 'scripts/data/bundle-usage.json'), 'utf8'));
 // Bounded archives avoid inflating a whole font/macro bundle for one file.
 const bundleRoot = join(target, 'dist/bundles');
 const chunkLimit = 512 * 1024;
-for (const name of pin.bundles) {
+for (const name of bundleNames) {
   const directory = join(bundleRoot, name);
   try { await access(join(directory, 'files')); } catch { continue; }
   const manifest = JSON.parse(await readFile(join(directory, 'manifest.json'), 'utf8'));
@@ -119,7 +123,7 @@ for (const name of pin.bundles) {
 const { BundleSet } = await import(new URL('../runtime/dist/vfs/bundle.js', import.meta.url));
 const { nodeIO } = await import(new URL('../runtime/dist/node.js', import.meta.url));
 const bundles = new BundleSet(await nodeIO());
-await bundles.addAll(pin.bundles.map(name => ({ name, manifestUrl: new URL(`../runtime/dist/bundles/${name}/`, import.meta.url).href })));
+await bundles.addAll(bundleNames.map(name => ({ name, manifestUrl: new URL(`../runtime/dist/bundles/${name}/`, import.meta.url).href })));
 await writeFile(join(bundleRoot, 'filesystem.json'), JSON.stringify(bundles.exportFilesystemIndex()));
 await writeFile(join(target, '.build-key'), recipeKey);
 console.log('Compiled fork engine; indexed chunked bundles ready');

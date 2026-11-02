@@ -50,7 +50,7 @@ export function createTikzRenderer(options = {}) {
     return new Promise((resolve, reject) => {
       if (signal?.aborted) { reject(abortError()); return; }
       const root = packageRoot();
-      const child = spawn(settings.nodeExecutable, ['--max-old-space-size=512', join(root, 'src/worker.js')], {
+      const child = spawn(settings.nodeExecutable, ['--max-old-space-size=512', join(root, 'dist/worker.js')], {
         env: {}, cwd: root, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
       });
       const chunks = [];

@@ -31,3 +31,12 @@ https://github.com/jmckalex/mp-tikz-wasm/blob/d44aeeba98b0e60d13c35dfd080076e6b0
 See the upstream Makefile, vendor/ and patches/ for rebuilding/replacing the
 runtime. The package resolves its runtime from its own install directory;
 consumers can replace those files with compatible rebuilt versions.
+
+## Extra TeX packages
+
+The tikz-extra bundle contains the TeX Live 2025 packages pinned in
+`runtime/extra-packages.json` (also in `scripts/data` in the source), with original copyright/license headers intact.
+Most use LPPL 1.3/1.3c; pgf-pie and tikz-qtree include GPL terms; cancel is public
+domain. Source archives and exact checksums are recorded in that manifest.
+The unified-latex parser (MIT) is bundled into the workers; its license is included
+in `dist/THIRD_PARTY_LICENSES.txt`.

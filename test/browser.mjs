@@ -10,9 +10,11 @@ const root = await mkdtemp(join(tmpdir(), 'tikz-browser-'));
 await copyTikzBrowserAssets(root);
 const requests = [];
 let ordinaryRequests = [];
+let extraRequests = [];
 const server = createServer(async (req, res) => {
   requests.push(req.url);
   if (req.url === "/checkpoint") { ordinaryRequests = [...requests]; res.end("ok"); return; }
+  if (req.url === "/extra-checkpoint") { extraRequests = [...requests]; res.end("ok"); return; }
   const path = resolve(root, '.' + new URL(req.url, 'http://local').pathname);
   if (!path.startsWith(root + '/')) { res.end('<!doctype html><title>TikZ browser verification</title>'); return; }
   try {
@@ -35,6 +37,9 @@ try {
     const source = String.raw`\begin{tikzpicture}\draw[blue,thick] (0,0) circle (1);\node at (0,0) {$\frac{1}{2}$};\end{tikzpicture}`;
     const image = await renderer.render(source);
     await fetch("/checkpoint");
+    const extra = await renderer.render(String.raw`\begin{tikzpicture}\tkzDefPoint(0,0){A}\tkzDefPoint(2,0){B}\tkzDefPoint(1,1){C}\tkzDrawPolygon(A,B,C)\tkzLabelPoints(A,B,C)\end{tikzpicture}`);
+    const chemistry = await renderer.render(String.raw`\begin{tikzpicture}\node {\SI{3.5}{\centi\metre} \ce{2H2 + O2 -> 2H2O}};\end{tikzpicture}`);
+    await fetch('/extra-checkpoint');
     const plot = await renderer.render(String.raw`\documentclass[tikz]{standalone}
 \usepackage{pgfplots}\pgfplotsset{compat=1.18}\begin{document}
 \begin{tikzpicture}\begin{axis}[width=6cm,height=4cm]\addplot[domain=-2:2] {x^2};\end{axis}\end{tikzpicture}\end{document}`);
@@ -54,8 +59,11 @@ try {
     const queue = await limited.render(source).then(() => false, e => /busy/.test(e.message));
     const timeoutOk = await timeout; limited.dispose(); clearInterval(timer);
     const img = document.createElement('img'); img.src = image.dataUrl; document.body.append(img); await img.decode();
-    return { width: image.width, height: image.height, plot: plot.width, graph: graph.width, recovered: recovered.width, bad, abortOk, timeoutOk, queue, ticks, naturalWidth: img.naturalWidth };
+    return { extra: extra.width, chemistry: chemistry.width, width: image.width, height: image.height, plot: plot.width, graph: graph.width, recovered: recovered.width, bad, abortOk, timeoutOk, queue, ticks, naturalWidth: img.naturalWidth };
   });
+  assert(result.extra > 0 && result.chemistry > 0);
+  assert(!ordinaryRequests.some(url => url.includes('/tikz-extra/files/')), 'ordinary pictures do not fetch extra macros');
+  assert(extraRequests.some(url => url.includes('/tikz-extra/files/')), 'extra macros load when requested');
   assert(result.width > 0 && result.height > 0 && result.plot > 0 && result.graph > 0 && result.recovered > 0 && result.naturalWidth > 0);
   for (const key of ['bad','abortOk','timeoutOk','queue']) assert(result[key], key);
   assert(result.ticks > 10, 'UI thread stayed responsive');

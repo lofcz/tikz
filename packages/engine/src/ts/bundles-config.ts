@@ -9,7 +9,7 @@ import type { BundleName, BundleSpec } from './types.js';
 // Latin Modern text family, and one for the maths font (unicode-math):
 //   MetaPost.create({ bundles: [...DEFAULT_BUNDLES, 'opentype'] })
 //   MetaPost.create({ bundles: [...DEFAULT_BUNDLES, 'opentype', 'otf-fonts'] })
-export const DEFAULT_BUNDLES: BundleName[] = ['core', 'cm-tfm', 'cm-type1', 'lm-fonts', 'ps-fonts', 'tex-plain', 'latex-core', 'latex-extra', 'tikz-snapshot', 'luatex'];
+export const DEFAULT_BUNDLES: BundleName[] = ['core', 'cm-tfm', 'cm-type1', 'lm-fonts', 'ps-fonts', 'tex-plain', 'latex-core', 'latex-extra', 'tikz-snapshot', 'luatex', 'tikz-extra'];
 
 export function resolveBundleSpecs(bundles: (BundleName | BundleSpec)[], base: string): BundleSpec[] {
   if (!base.endsWith('/')) base += '/';

@@ -3,3 +3,8 @@ runtime/
 *.tgz
 .npmrc
 .runtime-*/
+
+dist/
+old/
+scratch/
+scripts/data/texlive/

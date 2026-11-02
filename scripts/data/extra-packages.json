@@ -1,0 +1,102 @@
+[
+  {
+    "name": "tkz-euclide",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/tkz-euclide.tar.xz",
+    "sha256": "33a6a1796099a1557c9441346763a7a22c6f81604b039b0ce92cc28468f73d1e"
+  },
+  {
+    "name": "tkz-base",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/tkz-base.tar.xz",
+    "sha256": "12c0a36b36259cbf1045f07f6d5b335ce8a20023bd775ea5c19fda16a571e1b3"
+  },
+  {
+    "name": "siunitx",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/siunitx.tar.xz",
+    "sha256": "4d086f43a39f82d5281ec7bdf45ea1d8e274910a9f46dda44c90424cde020076"
+  },
+  {
+    "name": "pgf-pie",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/pgf-pie.tar.xz",
+    "sha256": "9e86c0ecdb260bb02d38a0078f2208ef9d285a624da70c7e12f583600106ebea"
+  },
+  {
+    "name": "tikz-qtree",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/tikz-qtree.tar.xz",
+    "sha256": "9126513993d5f61e8cf2b97b58dc39c14d1b0452386bf504b529b6e2d41bd6ae"
+  },
+  {
+    "name": "forest",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/forest.tar.xz",
+    "sha256": "cb0c9e112301fb9bdd35b9322fe12ac7217af30799dd7352de250cd076568097"
+  },
+  {
+    "name": "pgfopts",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/pgfopts.tar.xz",
+    "sha256": "a75a8f4700be214cadf02e269bea91d4f935c6b149a4f27ca6780d5319c71153"
+  },
+  {
+    "name": "etoolbox",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/etoolbox.tar.xz",
+    "sha256": "12977cb9635da42257ad2b984b5bf8b7c2542ab70a6353dbfef47a61dc9ed7af"
+  },
+  {
+    "name": "elocalloc",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/elocalloc.tar.xz",
+    "sha256": "022b91cb41e49670d030704e07d3223b0ff60756269c3c83ea386a30fd66b153"
+  },
+  {
+    "name": "environ",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/environ.tar.xz",
+    "sha256": "752b2b4e2dcb0630e0fcb25e9fdc95e6acf93b292dd0b0398eb2ba2e83988475"
+  },
+  {
+    "name": "trimspaces",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/trimspaces.tar.xz",
+    "sha256": "7fef322711a6d50b787a3db74f639256a63ccdf67a89aefbfb8c3377ad053d1b"
+  },
+  {
+    "name": "inlinedef",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/inlinedef.tar.xz",
+    "sha256": "6c45a584c413e7f6d0255749e3001b1d11c4ea08f1b0d655717e4c901c7418ef"
+  },
+  {
+    "name": "smartdiagram",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/smartdiagram.tar.xz",
+    "sha256": "2795a15408427a989b8cd031c37360fa68ab4f2a21be3cb422d2a5bedd357095"
+  },
+  {
+    "name": "xstring",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/xstring.tar.xz",
+    "sha256": "02f71cefc2bc50481f6aac7ef2faf60eeb6656cc19f9dff000e8f559b5635e85"
+  },
+  {
+    "name": "mhchem",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/mhchem.tar.xz",
+    "sha256": "8470ea93def54cc9ab86d9792a4c2991934803de8f79df98466d77943360e200"
+  },
+  {
+    "name": "chemgreek",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/chemgreek.tar.xz",
+    "sha256": "316a61d7410a564026973bd895d9bcb6dda5cbd61a8497f54831170814c1a0d8"
+  },
+  {
+    "name": "cancel",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/cancel.tar.xz",
+    "sha256": "cafcfd7cd2474146d44c56d14bf075acf59c5745d0cafe09e873c0bb36f79c64"
+  },
+  {
+    "name": "physics",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/physics.tar.xz",
+    "sha256": "f68d3c7af9989d448e87e49525358c7b9ae0c32376e8f3e71be9c73b0bca040f"
+  },
+  {
+    "name": "xpatch",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/xpatch.tar.xz",
+    "sha256": "4c92477703e1ea016422bcab2cd355d9b05fee9e5981c30964bd90d8e83c6e95"
+  },
+  {
+    "name": "carlisle",
+    "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final/archive/carlisle.tar.xz",
+    "sha256": "5b93192b5e5ca7f41e23a1ec1ff2ef59d5d54fb158201d374cbea4f46c19cc9f"
+  }
+]

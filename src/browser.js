@@ -29,7 +29,7 @@ export function createTikzRenderer(options) {
     if (ready) { execute(); return; }
     active.timer = setTimeout(() => finish(new Error('TikZ runtime loading timed out.')), loadTimeoutMs);
     try {
-      worker = new Worker(new URL('src/browser-worker.js', new URL(assetBaseUrl, location.href)), { type: 'module', name: 'tikz' });
+      worker = new Worker(new URL('dist/browser-worker.js', new URL(assetBaseUrl, location.href)), { type: 'module', name: 'tikz' });
       worker.onmessage = ({ data }) => {
         if (data.ready) { ready = true; execute(); }
         else if (data.error) finish(new Error(data.error));

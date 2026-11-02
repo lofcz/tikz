@@ -11,7 +11,7 @@ export async function copyTikzAssets(functionDirectory) {
     throw new Error('TikZ deployment destination must differ from the installed package');
   await mkdir(destination, { recursive: true });
   const manifest = JSON.parse(await readFile(join(source, 'package.json'), 'utf8'));
-  for (const entry of ['src', 'runtime', 'LICENSE', 'NOTICE.md', 'upstream.json', 'package.json'])
+  for (const entry of ['src', 'dist', 'runtime', 'LICENSE', 'NOTICE.md', 'upstream.json', 'package.json'])
     await cp(join(source, entry), join(destination, entry), { recursive: true, dereference: true });
   // Validate resolution from the output, never accidentally use the developer's install.
   const resolved = createRequire(join(resolve(functionDirectory), 'handler.mjs')).resolve('@lofcz/tikz/package.json');
@@ -27,13 +27,16 @@ export async function copyTikzBrowserAssets(directory) {
   if (destination === source || destination.startsWith(source + '/'))
     throw new Error('TikZ browser assets must be outside the installed package');
   await mkdir(join(destination, 'src'), { recursive: true });
+  await mkdir(join(destination, 'dist'), { recursive: true });
   await cp(join(source, 'runtime'), join(destination, 'runtime'), { recursive: true });
-  for (const name of ['browser.js', 'browser-worker.js', 'source.js'])
-    await cp(join(source, 'src', name), join(destination, 'src', name));
+  await cp(join(source, 'src', 'browser.js'), join(destination, 'src', 'browser.js'));
+  // The worker is self-contained (parser included); only the engine stays separate.
+  await cp(join(source, 'dist', 'browser-worker.js'), join(destination, 'dist', 'browser-worker.js'));
+  await cp(join(source, 'dist', 'THIRD_PARTY_LICENSES.txt'), join(destination, 'dist', 'THIRD_PARTY_LICENSES.txt'));
   for (const name of ['LICENSE', 'NOTICE.md', 'upstream.json'])
     await cp(join(source, name), join(destination, name));
   const pin = JSON.parse(await readFile(join(source, 'upstream.json'), 'utf8'));
-  for (const name of pin.bundles) {
+  for (const name of [...pin.bundles, 'tikz-extra']) {
     const base = join(destination, 'runtime/dist/bundles', name);
     const index = JSON.parse(await readFile(join(base, 'files.index.json'), 'utf8'));
     const chunks = new Map();

@@ -16,11 +16,11 @@ test('supports a complete pgfplots LaTeX document', async () => {
 \addplot[blue,domain=-2:2,samples=25] {x^2};\end{axis}\end{tikzpicture}\end{document}`);
   assert(image.width > image.height); assert.match(image.svg, /<path/);
 });
-test('rejects malformed TeX, multiple pages and invalid source', async () => {
+test('rejects malformed TeX and invalid source', async () => {
   await assert.rejects(renderTikz(''), /1–12,000/);
   await assert.rejects(renderTikz('x'.repeat(12001)), /1–12,000/);
-  await assert.rejects(renderTikz(String.raw`\begin{tikzpicture}\notARealCommand\end{tikzpicture}`), /valid page/);
-  await assert.rejects(renderTikz(String.raw`\documentclass{article}\begin{document}one\newpage two\end{document}`), /valid page/);
+  await assert.rejects(renderTikz(String.raw`\begin{tikzpicture}\notARealCommand\end{tikzpicture}`), /TikZ error/);
+  await assert.rejects(renderTikz(String.raw`\begin{tikzpicture}\node {unclosed;\end{tikzpicture}`), /Unbalanced braces/);
 });
 test('does not expose the host filesystem to TeX', async () => {
   await assert.rejects(renderTikz(String.raw`\documentclass{article}\begin{document}\input{/etc/passwd}\end{document}`));

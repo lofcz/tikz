@@ -24,7 +24,7 @@ const image = await renderTikz(String.raw`
 
 Use `dataUrl` as an image source. Do not insert untrusted SVG as HTML. Text is
 outlined, so the image does not need web fonts. Full `\documentclass` documents
-are accepted unchanged. Snippets receive a standalone wrapper and the standard
+are normalized to a standalone document. Snippets receive a standalone wrapper and the standard
 calc, intersections, angles, quotes, arrows.meta and positioning libraries.
 pgfplots is available through `\usepackage{pgfplots}` in a complete document.
 
@@ -58,12 +58,27 @@ limits when serving untrusted workloads. Browser apps use the worker entry below
 
 ## Source normalization
 
-Bare pictures are wrapped in a `standalone` document with the common TikZ
-libraries. A `\color{…}` switch inside a `font=` key (`font=\small\color{red!70!black}`)
-is moved to the node's `text=` key before compilation: in this DVI→SVG pipeline
-the colour special opened by the font switch is never popped inside the
-picture and dvisvgm rejects the page (`missing closing tag(s): </g>`). The
-rewrite keeps the same colour and leaves every other source untouched.
+Source is parsed by unified-latex's PEG parser. AST passes handle nested groups,
+macro arguments, environments, PGF key lists and document-defined macros. Both
+workers bundle the parser; consumers install no extra JavaScript dependencies.
+
+Normalization accepts Markdown fences, escaped tool strings, loose drawing commands
+and full documents. It hoists preamble commands, unwraps document/slide decoration,
+preserves coordinate names, repairs bare math in labels, maps supported Unicode and
+colour names, and moves font colour switches into TikZ's `text=` key. Compiler
+failures identify the offending command/key and show source context. Unknown
+packages cannot be fetched at runtime; normalization reports them in diagnostics.
+This is a compatibility layer, not a general TeX interpreter or a check that the
+geometry is correct. Missing fonts, arbitrary macros and malformed geometry can
+still require source changes.
+
+The bundled TeX tree includes tkz-euclide/tkz-base, siunitx, mhchem, pgf-pie,
+tikz-qtree, forest, smartdiagram, physics and cancel with their dependencies.
+Known package use is detected automatically; explicit `\usepackage` also works.
+The engine indexes these files at startup but reads/fetches their contents only
+when compilation needs them. An ordinary picture does not download their macros.
+The package archives are pinned to TeX Live 2025 with SHA-256 checksums in
+`scripts/data/extra-packages.json`, matching the engine's LaTeX format.
 
 ## Browser rendering
 
@@ -107,7 +122,7 @@ This copies the complete package into that function's node_modules. The small
 entry module can also be bundled: it resolves `@lofcz/tikz/package.json` from the
 output location, rather than resolving WASM relative to a relocated chunk. Call
 the helper for each function that includes the renderer. File tracers must retain
-the full package including `runtime/`; copying only JavaScript is insufficient.
+the full package including `dist/` and `runtime/`; copying only JavaScript is insufficient.
 
 ## Development
 
@@ -156,3 +171,6 @@ gh workflow run release.yml -R lofcz/tikz -f release_type=patch
 ```
 
 Licensing and native source links are in [NOTICE.md](NOTICE.md).
+
+Building the extra TeX bundle requires `xz` on PATH. Package archives are cached
+in `scripts/data/texlive/`; builds verify their checksums before extraction.
